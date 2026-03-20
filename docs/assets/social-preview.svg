@@ -1,0 +1,61 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4E7D4"/>
+      <stop offset="1" stop-color="#E8DCC4"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="772" y1="84" x2="1188" y2="556" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#163244"/>
+      <stop offset="1" stop-color="#0C1E2A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="96" y1="232" x2="392" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6B4A"/>
+      <stop offset="1" stop-color="#FFB04A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="1208" cy="84" r="148" fill="#EFD6B8" fill-opacity="0.78"/>
+  <circle cx="108" cy="584" r="156" fill="#E5D2B1" fill-opacity="0.68"/>
+
+  <rect x="72" y="72" width="1136" height="496" rx="28" fill="#F9F1E4" stroke="#D9C29F" stroke-width="2"/>
+
+  <rect x="104" y="110" width="164" height="40" rx="20" fill="#162A35"/>
+  <text x="186" y="136" text-anchor="middle" fill="#F7EEDB" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="1.6">ISSUE-CENTRIC</text>
+
+  <text x="104" y="248" fill="#132530" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700">OpenClaw</text>
+  <text x="104" y="330" fill="#132530" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700">Guardian</text>
+  <rect x="104" y="356" width="304" height="12" rx="6" fill="url(#accent)"/>
+
+  <text x="104" y="422" fill="#243946" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Detect. Mitigate. Repair.</text>
+  <text x="104" y="470" fill="#38515F" font-family="Arial, Helvetica, sans-serif" font-size="24">
+    <tspan x="104" dy="0">Issue-centric guardrails for auth, proxy, plugin,</tspan>
+    <tspan x="104" dy="34">and local runtime failures in OpenClaw.</tspan>
+  </text>
+
+  <g transform="translate(774 88)">
+    <rect width="402" height="464" rx="26" fill="url(#panel)"/>
+    <rect x="28" y="28" width="346" height="72" rx="18" fill="#122938" stroke="#2D5870" stroke-width="2"/>
+    <circle cx="56" cy="64" r="8" fill="#FF6B4A"/>
+    <circle cx="82" cy="64" r="8" fill="#FFB04A"/>
+    <circle cx="108" cy="64" r="8" fill="#7BDCB5"/>
+    <text x="140" y="72" fill="#EAF4F7" font-family="'Courier New', monospace" font-size="26" font-weight="700">guardian</text>
+
+    <rect x="28" y="126" width="170" height="64" rx="16" fill="#18384A"/>
+    <text x="50" y="166" fill="#FFB04A" font-family="'Courier New', monospace" font-size="24" font-weight="700">preflight</text>
+
+    <rect x="214" y="126" width="160" height="64" rx="16" fill="#18384A"/>
+    <text x="236" y="166" fill="#7BDCB5" font-family="'Courier New', monospace" font-size="24" font-weight="700">repair</text>
+
+    <rect x="28" y="206" width="346" height="128" rx="18" fill="#102533" stroke="#214960" stroke-width="2"/>
+    <text x="52" y="246" fill="#F7EEDB" font-family="'Courier New', monospace" font-size="24">issue: codex-auth</text>
+    <text x="52" y="284" fill="#87D1FF" font-family="'Courier New', monospace" font-size="22">+ EnvHttpProxyAgent</text>
+    <text x="52" y="318" fill="#87D1FF" font-family="'Courier New', monospace" font-size="22">+ curl fallback</text>
+
+    <rect x="28" y="356" width="346" height="80" rx="18" fill="#F7EEDB"/>
+    <text x="50" y="406" fill="#152A36" font-family="'Courier New', monospace" font-size="26" font-weight="700">auth  proxy  plugins  runtime</text>
+  </g>
+
+  <path d="M618 182C666 182 700 212 712 264" stroke="#FF6B4A" stroke-width="6" stroke-linecap="round"/>
+  <path d="M618 458C666 458 700 430 712 382" stroke="#0F7AA8" stroke-width="6" stroke-linecap="round"/>
+</svg>
