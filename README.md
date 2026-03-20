@@ -1,12 +1,87 @@
 # `openclaw-local-overrides`
 
-这个仓库用于存放不会直接修改上游安装包、但又需要长期保留的本地覆盖层。
+`openclaw-local-overrides` 是一个面向 `OpenClaw` 的本地覆盖层仓库。
+它的目的不是替代上游，也不是重新打包 `OpenClaw`，
+而是在不直接修改全局安装包的前提下，
+为一些真实环境中的运行时错误提供可维护、可回滚、可逐步沉淀的修复方案。
+
+仓库版本：`0.7.2`
+
+## 这是什么
+
+这个仓库解决的是这类问题：
+
+- `OpenClaw` 在某些网络、代理、系统环境下会出现运行时错误
+- 这些错误通常不是业务配置写错，而是执行链路中的实现细节与本地环境不兼容
+- 用户需要一个能立即落地的修复层，而不是等待上游版本发布
+
+这类修复往往有几个特点：
+
+- 影响范围应当尽量小
+- 必须能快速启用和关闭
+- 不应直接污染全局安装的 `OpenClaw`
+- 后续如果上游修复，应该能方便地移除
+
+所以这个项目的定位是：
+
+> 为 `OpenClaw` 提供一层本地运行时覆盖机制，
+> 把“特定错误的修复”做成独立模块，
+> 以最小侵入方式接入实际运行环境。
+
+## 解决什么问题
+
+当前仓库内置的模块是：
+
+- [openai-codex-auth-proxy](./runtime/modules/openai-codex-auth-proxy/README.md)
+
+它解决的具体问题是：
+
+- `openclaw models auth login --provider openai-codex`
+  在某些 HTTP 代理环境下，
+  浏览器授权已经成功，
+  但 CLI 阶段的 `oauth/token` 交换仍然失败
+
+这个问题的典型表现包括：
+
+- `unsupported_country_region_territory`
+- `fetch failed`
+- 代理明明可用，但 `OpenClaw` 的 `openai-codex` OAuth 流程仍然无法完成
+
+## 为什么需要这个项目
+
+直接修改上游安装包并不是一个理想方案，因为：
+
+- 升级后容易被覆盖
+- 本地改动难以审计和分享
+- 多个修复点会逐渐堆积成不可维护的私有分叉
+
+而把修复做成独立仓库有这些好处：
+
+- 修复逻辑可以单独版本化
+- 可以通过 Git 管理和分享
+- 可以通过模块化方式精确控制影响范围
+- 运行时只接入真正需要的部分
+
+## 核心思路
+
+这个仓库的核心思路不是“重写 `OpenClaw`”，而是：
+
+1. 保留原始 `OpenClaw` 安装不动
+2. 在本地 shell / Node 进程启动点做一层极薄的接入
+3. 根据当前命令匹配具体模块
+4. 只在命中的场景下注入修复逻辑
+
+在当前实现里，对应的是：
 
 - 一个统一 `runtime/bootstrap` 入口
 - 一组可启停的 `runtime/modules`
 - 一份集中配置 `runtime/config/enabled-modules.json`
 
-仓库版本：`0.7.1`
+这意味着：
+
+- 普通命令不会被无差别重写
+- 每个修复方案都可以独立维护
+- 后续新增别的 `OpenClaw` 本地修复时，不需要再重新设计接入方式
 
 相关文档：
 
@@ -55,12 +130,11 @@ openclaw-local-overrides/
 - 把“仓库根目录”和“运行时目录”明确分开
 - 把升级后的维护成本尽量留在本仓库内部
 
-## 模块
+## 当前模块
 
 - [openai-codex-auth-proxy](./runtime/modules/openai-codex-auth-proxy/README.md)
   运行时路径：`runtime/modules/openai-codex-auth-proxy`
-  用于修正 `openclaw models auth login --provider openai-codex`
-  在某些代理环境下的 `oauth/token` 交换异常。
+  用于修正 `openai-codex` OAuth 在代理环境下的 token 交换异常。
 
 ## 模块约定
 
