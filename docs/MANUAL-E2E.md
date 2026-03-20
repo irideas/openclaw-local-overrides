@@ -1,6 +1,6 @@
 # Manual E2E Checklist
 
-本文档记录 `openai-codex-auth-proxy` 的人工端到端验证步骤。
+本文档记录 `openai-codex-oauth-proxy-failure` 的人工端到端验证步骤。
 
 这份清单的目标不是替代自动化测试，而是验证：
 
@@ -11,9 +11,10 @@
 当你修改了以下任一内容时，建议执行一次人工 E2E：
 
 - `runtime/bootstrap/bash-init.bash`
-- `runtime/bootstrap/node-preload-entry.mjs`
-- `runtime/modules/openai-codex-auth-proxy/module.json`
-- `runtime/modules/openai-codex-auth-proxy/preload-hook.mjs`
+- `runtime/bootstrap/node-entry.mjs`
+- `core/runtime-runner.mjs`
+- `issues/openai-codex-oauth-proxy-failure/issue.json`
+- `issues/openai-codex-oauth-proxy-failure/runtime.mjs`
 - 与代理接管、`curl fallback`、日志路径、运行时路由相关的核心逻辑
 
 ## 前置条件
@@ -78,15 +79,15 @@ OpenAI OAuth complete
 tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
 ```
 
-检查模块日志：
+检查 issue 日志：
 
 ```bash
-tail -n 40 "$HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log"
+tail -n 40 "$HOME/.openclaw/logs/local-overrides/openai-codex-oauth-proxy-failure.log"
 ```
 
 重点确认存在：
 
-- `module_activate_start`
+- `issue_activate_start`
 - `preload_activated`
 - `curl_fallback_spawn`
 - `curl_fallback_succeeded`
@@ -114,7 +115,7 @@ $HOME/.openclaw/agents/main/agent/auth-profiles.json
 
 - 执行命令的完整终端输出
 - `runtime.log`
-- `openai-codex-auth-proxy.log`
+- `openai-codex-oauth-proxy-failure.log`
 - 当前代理环境变量
 - 浏览器是否完成授权
 - 是否收到 `localhost:1455/auth/callback`
@@ -125,5 +126,5 @@ $HOME/.openclaw/agents/main/agent/auth-profiles.json
 
 1. 浏览器授权成功
 2. CLI 没有报错退出
-3. 模块日志里出现 `curl_fallback_succeeded` 且状态为 `200`
+3. issue 日志里出现 `curl_fallback_succeeded` 且状态为 `200`
 4. `auth-profiles.json` 里对应 profile 已更新

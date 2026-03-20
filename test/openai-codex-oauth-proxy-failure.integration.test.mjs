@@ -11,10 +11,12 @@ import {
   runProcess,
 } from "./test-helpers.mjs";
 
-const BOOTSTRAP_ENTRY = path.join(REPO_ROOT, "runtime", "bootstrap", "node-preload-entry.mjs");
+const BOOTSTRAP_ENTRY = path.join(REPO_ROOT, "runtime", "bootstrap", "node-entry.mjs");
 const BOOTSTRAP_BASH = path.join(REPO_ROOT, "runtime", "bootstrap", "bash-init.bash");
+const ISSUE_ID = "openai-codex-oauth-proxy-failure";
+const ISSUE_LOG = "openai-codex-oauth-proxy-failure.log";
 
-test("统一 preload 路由应能跑通 openai-codex-auth-proxy 的假 token 交换", () => {
+test("统一 runtime 路由应能跑通 openai-codex OAuth 代理问题的假 token 交换", () => {
   const logDir = createTempLogDir();
   const proxy = resolveProxyForTests();
 
@@ -23,8 +25,8 @@ test("统一 preload 路由应能跑通 openai-codex-auth-proxy 的假 token 交
       ...process.env,
       HTTP_PROXY: proxy,
       HTTPS_PROXY: proxy,
-      OPENCLAW_LOCAL_OVERRIDES_LOG_DIR: logDir,
-      OPENCLAW_LOCAL_OVERRIDES_FORCE_MODULES: "openai-codex-auth-proxy",
+      OPENCLAW_GUARDIAN_LOG_DIR: logDir,
+      OPENCLAW_GUARDIAN_FORCE_ISSUES: ISSUE_ID,
     };
     delete env.ALL_PROXY;
     delete env.all_proxy;
@@ -57,17 +59,17 @@ test("统一 preload 路由应能跑通 openai-codex-auth-proxy 的假 token 交
     assert.match(payload.body, /token_expired/);
 
     const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
-    const moduleLog = fs.readFileSync(path.join(logDir, "openai-codex-auth-proxy.log"), "utf8");
+    const issueLog = fs.readFileSync(path.join(logDir, ISSUE_LOG), "utf8");
 
-    assert.match(runtimeLog, /"activeModuleIds":\["openai-codex-auth-proxy"\]/);
+    assert.match(runtimeLog, /"activeIssueIds":\["openai-codex-oauth-proxy-failure"\]/);
     assert.match(runtimeLog, /"forceMatch":true/);
-    assert.match(moduleLog, /"event":"curl_fallback_succeeded".*"status":401/);
+    assert.match(issueLog, /"event":"curl_fallback_succeeded".*"status":401/);
   } finally {
     cleanupDir(logDir);
   }
 });
 
-test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex-auth-proxy 模块", (t) => {
+test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex OAuth 代理 issue", (t) => {
   if (!hasOpenClawBinary()) {
     t.skip("当前环境缺少 openclaw 可执行文件");
     return;
@@ -81,7 +83,7 @@ test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex-au
       ...process.env,
       HTTP_PROXY: proxy,
       HTTPS_PROXY: proxy,
-      OPENCLAW_LOCAL_OVERRIDES_LOG_DIR: logDir,
+      OPENCLAW_GUARDIAN_LOG_DIR: logDir,
     };
     delete env.ALL_PROXY;
     delete env.all_proxy;
@@ -98,11 +100,11 @@ test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex-au
     assert.equal(result.status, 0, result.stderr);
 
     const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
-    const moduleLog = fs.readFileSync(path.join(logDir, "openai-codex-auth-proxy.log"), "utf8");
+    const issueLog = fs.readFileSync(path.join(logDir, ISSUE_LOG), "utf8");
 
     assert.match(runtimeLog, /"activeByConfig":true/);
     assert.match(runtimeLog, /"normalMatch":true/);
-    assert.match(moduleLog, /"event":"preload_activated"/);
+    assert.match(issueLog, /"event":"preload_activated"/);
   } finally {
     cleanupDir(logDir);
   }

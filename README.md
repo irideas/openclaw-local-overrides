@@ -1,99 +1,105 @@
-# `openclaw-local-overrides`
+# `openclaw-guardian`
 
-`openclaw-local-overrides` 是一个面向 `OpenClaw` 的本地覆盖层仓库。
-它的目的不是替代上游，也不是重新打包 `OpenClaw`，
-而是在不直接修改全局安装包的前提下，
-为一些真实环境中的运行时错误提供可维护、可回滚、可逐步沉淀的修复方案。
+`openclaw-guardian` 是一个面向 `OpenClaw` 的本地问题治理仓库。
+它不替代上游，不重打包 `OpenClaw`，而是围绕真实环境里的运行时异常、配置冲突与可复现故障，
+提供一套可本地接入、可逐步下线、可独立维护的问题发现与修复机制。
 
-仓库版本：`0.7.2`
+当前版本：`0.7.3`
 
 ## 这是什么
 
-这个仓库解决的是这类问题：
+这个项目关注的不是“怎么扩展 `OpenClaw` 功能”，而是：
 
-- `OpenClaw` 在某些网络、代理、系统环境下会出现运行时错误
-- 这些错误通常不是业务配置写错，而是执行链路中的实现细节与本地环境不兼容
-- 用户需要一个能立即落地的修复层，而不是等待上游版本发布
+- 当 `OpenClaw` 在某些网络、代理、插件或系统环境里出现异常时，如何更早发现问题
+- 当问题已经出现时，如何用最小侵入的方式临时缓解或修复
+- 当上游还没有合适修复时，如何把本地经验沉淀成可共享、可维护的方案
 
-这类修复往往有几个特点：
+项目以 **issue** 为中心组织内容。  
+一个 issue 表示一种明确的问题现象，例如：
 
-- 影响范围应当尽量小
-- 必须能快速启用和关闭
-- 不应直接污染全局安装的 `OpenClaw`
-- 后续如果上游修复，应该能方便地移除
+- 某条 OAuth 登录链路在 HTTP 代理环境下失败
+- 某个插件因为本地状态冲突而重复注册
+- 某类命令在特定环境变量或本地配置下会稳定触发告警
 
-所以这个项目的定位是：
+围绕一个 issue，可以逐步补齐三种能力：
 
-> 为 `OpenClaw` 提供一层本地运行时覆盖机制，
-> 把“特定错误的修复”做成独立模块，
-> 以最小侵入方式接入实际运行环境。
+- `preflight`
+  在命令真正执行前检查风险，并输出提示
+- `runtime`
+  在命中场景下做进程内窄修复
+- `repair`
+  以显式、可审计的方式执行本地修复动作
 
-## 解决什么问题
+## 当前解决的问题
 
-当前仓库内置的模块是：
+当前仓库已经内置一个 issue：
 
-- [openai-codex-auth-proxy](./runtime/modules/openai-codex-auth-proxy/README.md)
+- [openai-codex-oauth-proxy-failure](./issues/openai-codex-oauth-proxy-failure/README.md)
 
-它解决的具体问题是：
+它解决的现象是：
 
-- `openclaw models auth login --provider openai-codex`
-  在某些 HTTP 代理环境下，
-  浏览器授权已经成功，
-  但 CLI 阶段的 `oauth/token` 交换仍然失败
+```bash
+openclaw models auth login --provider openai-codex
+```
 
-这个问题的典型表现包括：
+在某些 HTTP 代理环境下：
+
+- 浏览器授权已经成功
+- 本地回调也已经成功
+- 但 CLI 阶段的 `oauth/token` 交换仍然失败
+
+典型症状包括：
 
 - `unsupported_country_region_territory`
 - `fetch failed`
-- 代理明明可用，但 `OpenClaw` 的 `openai-codex` OAuth 流程仍然无法完成
+- 明明代理可用，但 `OpenClaw` 的 `openai-codex` OAuth 流程仍无法完成
 
-## 为什么需要这个项目
+这个 issue 当前主要通过 `runtime` 能力面落地，
+即在命中的运行时链路上做非常窄的代理接管与 `curl fallback`。
 
-直接修改上游安装包并不是一个理想方案，因为：
+## 为什么需要它
+
+这类问题如果直接去改全局安装包，通常会有几个问题：
 
 - 升级后容易被覆盖
-- 本地改动难以审计和分享
-- 多个修复点会逐渐堆积成不可维护的私有分叉
+- 本地改动不易审计
+- 不方便分享给其他使用者
+- 难以沉淀成一套长期维护的经验库
 
-而把修复做成独立仓库有这些好处：
+而把方案沉淀到独立仓库，有几个直接好处：
 
-- 修复逻辑可以单独版本化
-- 可以通过 Git 管理和分享
-- 可以通过模块化方式精确控制影响范围
-- 运行时只接入真正需要的部分
+- 不修改上游安装包
+- 本地接入与撤销都很轻
+- 每个 issue 可以独立演进
+- 可以逐步从单一修复脚本收敛为问题现象库
 
 ## 核心思路
 
-这个仓库的核心思路不是“重写 `OpenClaw`”，而是：
+`openclaw-guardian` 的中心不是“运行时模块”，而是“问题现象”。
 
-1. 保留原始 `OpenClaw` 安装不动
-2. 在本地 shell / Node 进程启动点做一层极薄的接入
-3. 根据当前命令匹配具体模块
-4. 只在命中的场景下注入修复逻辑
+也就是说，项目思路是：
 
-在当前实现里，对应的是：
+1. 先识别一个真实问题现象
+2. 给它分配稳定的 issue id
+3. 为这个 issue 补充：
+   - 现象描述
+   - 触发条件
+   - 用户可见提示
+   - `preflight` / `runtime` / `repair` 中合适的能力
+4. 再把可重复的执行套路沉淀到公共 `core/`
 
-- 一个统一 `runtime/bootstrap` 入口
-- 一组可启停的 `runtime/modules`
-- 一份集中配置 `runtime/config/enabled-modules.json`
+这让项目可以同时承载：
 
-这意味着：
+- 运行时链路修复
+- 命令前置检查
+- 显式本地修复
 
-- 普通命令不会被无差别重写
-- 每个修复方案都可以独立维护
-- 后续新增别的 `OpenClaw` 本地修复时，不需要再重新设计接入方式
-
-相关文档：
-
-- [CHANGELOG.md](./CHANGELOG.md)
-- [AGENTS.md](./AGENTS.md)
-- [TESTING.md](./docs/TESTING.md)
-- [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
+而不会把所有能力都挤进一种技术手段里。
 
 ## 目录结构
 
 ```text
-openclaw-local-overrides/
+openclaw-guardian/
   .github/
     workflows/
       test.yml
@@ -101,142 +107,130 @@ openclaw-local-overrides/
   CHANGELOG.md
   LICENSE
   docs/
+    GUARDIAN-REDESIGN.md
     MANUAL-E2E.md
     TESTING.md
+  core/
+    i18n-renderer.mjs
+    issue-loader.mjs
+    locale.mjs
+    logger.mjs
+    preflight-runner.mjs
+    repair-runner.mjs
+    runtime-runner.mjs
+  issues/
+    openai-codex-oauth-proxy-failure/
+      issue.json
+      runtime.mjs
+      README.md
+      i18n/
+        en.json
+        zh-CN.json
   runtime/
     bootstrap/
       bash-init.bash
       logger.mjs
       module-runtime.mjs
+      node-entry.mjs
       node-preload-entry.mjs
     config/
-      enabled-modules.json
-    modules/
-      openai-codex-auth-proxy/
-        module.json
-        preload-hook.mjs
-        README.md
+      enabled-issues.json
   test/
-    *.test.mjs
+    issue-loader.test.mjs
+    openai-codex-oauth-proxy-failure.integration.test.mjs
+    test-helpers.mjs
   package.json
 ```
 
-## 设计原则
+其中：
 
-- 不直接修改全局安装的 `openclaw`
-- 尽量不依赖临时调试目录
-- 统一接入方式
-- 让“命令匹配、模块启停、日志套路”变成公共能力
-- 把“仓库根目录”和“运行时目录”明确分开
-- 把升级后的维护成本尽量留在本仓库内部
+- `issues/`
+  负责承载具体问题现象
+- `core/`
+  负责承载公共执行机制
+- `runtime/`
+  负责导出真正接入 `OpenClaw` 运行时的薄入口
 
-## 当前模块
+## 多语言输出
 
-- [openai-codex-auth-proxy](./runtime/modules/openai-codex-auth-proxy/README.md)
-  运行时路径：`runtime/modules/openai-codex-auth-proxy`
-  用于修正 `openai-codex` OAuth 在代理环境下的 token 交换异常。
+所有用户可见输出都应尽量跟随当前运行时语言。
 
-## 模块约定
+当前约定是：
 
-每个模块遵循这一组公共约定：
+- 至少支持 `zh-CN` 与 `en`
+- 当无法识别当前语言时，兜底为 `en`
+- issue 自己维护各自的 `i18n/` 文案
+- 公共层只负责语言解析与文案渲染
 
-- `runtime/modules/<module-id>/module.json`
-  声明模块 id、匹配规则、入口文件和日志文件
-- `runtime/modules/<module-id>/preload-hook.mjs`
-  实现模块自己的 Node preload 行为
-- `runtime/config/enabled-modules.json`
-  负责决定哪些模块被统一运行时启用
+这样后续新增 issue 时，就可以在不改公共框架的前提下补齐对应语言。
 
-`module.json` 已支持的字段有：
+## 安装
 
-- `id`
-- `kind`
-- `enabledByDefault`
-- `match.argvAll`
-- `match.provider`
-- `entry.preload`
-- `env.variables`
-- `logging.file`
+下面示例中的：
 
-仓库采用 [MIT License](./LICENSE)。
+- `<repo-url>`
+  表示你自己的仓库地址
+- `<repo-dir>`
+  表示你自己选择的本地工程目录
 
-## 安装步骤
-
-下面示例中的 `<repo-dir>` 表示你自己选择的 Git 仓库存放目录。
-它可以是任意合适的位置，例如：
-
-- `$HOME/dev/openclaw-local-overrides`
-- `$HOME/workspace/openclaw-local-overrides`
-- `/opt/openclaw-local-overrides`
-
-### 1. 克隆仓库到工程目录
+### 1. 克隆仓库
 
 ```bash
-git clone git@github.com:irideas/openclaw-local-overrides.git "<repo-dir>"
+git clone "<repo-url>" "<repo-dir>"
 ```
 
 ### 2. 建立运行时软链接
 
-运行时目录固定使用：
+运行时固定使用：
 
 ```text
 $HOME/.openclaw/local-overrides
 ```
 
-但这个目录不直接承载整个 Git 仓库，而是软链接到仓库内的 `runtime/`：
+但这个目录不直接承载整个仓库，而是软链接到仓库内的 `runtime/`：
 
 ```bash
 ln -sfn "<repo-dir>/runtime" "$HOME/.openclaw/local-overrides"
 ```
 
-### 3. 在 Shell 启动文件中接入统一入口
-
-在 `~/.bash_profile` 中增加：
+### 3. 在 `~/.bash_profile` 中接入统一入口
 
 ```bash
 [ -f "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash" ] && \
   source "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash"
 ```
 
-### 4. 重新加载 Shell
+### 4. 重新加载 shell
 
 ```bash
 source ~/.bash_profile
 ```
 
-### 5. 配置模块启停覆盖
+### 5. 配置 issue 启停覆盖
 
 编辑：
 
 ```text
-$HOME/.openclaw/local-overrides/config/enabled-modules.json
+$HOME/.openclaw/local-overrides/config/enabled-issues.json
 ```
 
-配置文件的职责是“覆盖默认行为”，例如：
+示例：
 
 ```json
 {
-  "enabledModules": [],
-  "disabledModules": []
+  "enabledIssues": [],
+  "disabledIssues": []
 }
 ```
 
-默认启用状态由各模块自己的 `module.json` 决定：
+求值顺序是：
 
-- `enabledByDefault: true`
-  表示模块在未被显式禁用时默认生效
-- `enabledByDefault: false`
-  表示模块必须显式加入 `enabledModules`
+1. 先发现 `issues/` 下所有 issue
+2. 先取所有 `enabledByDefault: true` 的 issue
+3. 再合并 `enabledIssues`
+4. 最后减去 `disabledIssues`
 
-因此配置求值顺序是：
-
-1. 先发现 `modules/` 下所有模块
-   这里的 `modules/` 指 `runtime/modules/`
-2. 先取所有 `enabledByDefault: true` 的模块
-3. 再合并 `enabledModules`
-4. 最后减去 `disabledModules`
-
-### 6. 验证统一接入是否生效
+### 6. 验证接入
 
 ```bash
 type -a openclaw
@@ -248,139 +242,45 @@ type -a openclaw
 openclaw is a function
 ```
 
-然后可继续检查运行日志：
+然后可继续查看日志：
 
 ```bash
 tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
 ```
 
-## 运行原理
-
-1. `runtime/bootstrap/bash-init.bash`
-   在 shell 中接管 `openclaw`
-2. 每次执行 `openclaw ...` 时，
-   统一注入 `runtime/bootstrap/node-preload-entry.mjs`
-3. `runtime/bootstrap/node-preload-entry.mjs`
-   发现模块并读取 `runtime/config/enabled-modules.json`
-4. 它根据当前 `process.argv`
-   与默认启用规则求值得到候选模块
-5. 命中的模块再加载自己的 `preload-hook.mjs`
-
-因此后续新增模块时，只需要：
-
-- 增加 `runtime/modules/<module-id>/module.json`
-- 增加 `runtime/modules/<module-id>/preload-hook.mjs`
-- 按需设置 `enabledByDefault`
-- 如有需要，再在 `runtime/config/enabled-modules.json` 中显式启用或禁用
-
-不需要再修改 `~/.bash_profile`
-
-## 日志
-
-统一运行日志：
-
-```text
-$HOME/.openclaw/logs/local-overrides/runtime.log
-```
-
-模块日志：
-
-```text
-$HOME/.openclaw/logs/local-overrides/<module-log-file>
-```
-
-例如本仓库的 `openai-codex-auth-proxy` 模块会写入：
-
-```text
-$HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
-```
-
-如果需要在测试或调试中隔离日志目录，可以临时覆盖：
-
-```bash
-export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
-```
-
 ## 测试
 
-仓库包含：
-
-- 公共运行时单测
-- `openai-codex-auth-proxy` 的集成测试
-- 最小 GitHub Actions 测试工作流
-
-默认运行：
+默认自动化门禁：
 
 ```bash
-cd "<repo-dir>"
 npm test
 ```
 
-也可以分别执行：
+本地完整自动化测试：
 
 ```bash
-npm run test:unit
-npm run test:integration
 npm run test:all
 ```
 
-说明：
-
-- `npm test`
-  只执行 `unit`
-- `npm run test:integration`
-  需要真实代理
-- `npm run test:all`
-  本地一次性执行全部自动化测试
-
-如果要执行 `integration` 或 `test:all`，需要准备代理环境。
-如需显式指定集成测试使用的代理，可以设置：
+需要真实 HTTP 代理的集成测试：
 
 ```bash
-export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
+export HTTP_PROXY=http://<your-http-proxy-host>:<port>
+export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
+unset ALL_PROXY
+unset all_proxy
+npm run test:integration
 ```
 
-测试当前覆盖：
+更多说明见：
 
-- 模块 manifest 校验
-- 模块发现与默认启用策略
-- 统一 preload 路由
-- 统一 bash 入口到 `openai-codex-auth-proxy` 的集成路径
-- 人工 E2E 清单见 [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
+- [TESTING.md](./docs/TESTING.md)
+- [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
 
-## GitHub Actions
+## 相关文档
 
-仓库当前提供：
+- [CHANGELOG.md](./CHANGELOG.md)
+- [AGENTS.md](./AGENTS.md)
+- [GUARDIAN-REDESIGN.md](./docs/GUARDIAN-REDESIGN.md)
 
-- `push` 到 `main` 时自动执行 `unit`
-- `pull_request` 时自动执行 `unit`
-- `workflow_dispatch` 时可选执行 `integration`
-
-工作流文件：
-
-```text
-.github/workflows/test.yml
-```
-
-如果你希望在 GitHub 上运行集成测试，需要在仓库里配置 secret：
-
-```text
-OPENCLAW_PROXY_TEST_PROXY_URL
-```
-
-GitHub 路径：
-
-```text
-Repo Settings -> Secrets and variables -> Actions
-```
-
-配置完后，可以在：
-
-```text
-Repo -> Actions -> ci -> Run workflow
-```
-
-手动勾选 `run_integration` 来执行集成测试。
-
-如果你只需要“提交代码后自动跑测试”，当前默认已经满足，
-前提是仓库已启用 GitHub Actions。
+仓库采用 [MIT License](./LICENSE)。

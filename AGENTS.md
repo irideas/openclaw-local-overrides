@@ -1,12 +1,12 @@
 # AGENTS.md
 
-本文件只描述 `openclaw-local-overrides` 的维护规则。
-项目结构、模块说明和使用方式以 [README.md](./README.md) 为准，不在这里重复。
+本文件只描述 `openclaw-guardian` 的维护规则。
+项目结构、issue 说明和使用方式以 [README.md](./README.md) 为准，不在这里重复。
 
 ## 维护原则
 
-- 优先保持 `bootstrap/` 稳定，避免把模块特定逻辑回灌到公共运行时
-- 新增或修改模块时，应同时补齐对应文档与测试
+- 优先保持 `core/` 与 `runtime/bootstrap/` 稳定，避免把 issue 特定逻辑回灌到公共层
+- 新增或修改 issue 时，应同时补齐对应文档与测试
 - 不直接修改全局安装的 `openclaw`，本仓库只维护本地覆盖层
 
 ## 代码要求
@@ -19,13 +19,13 @@
 
 - 提交前至少执行 `npm test`
 - 修改公共运行时时，应优先补单测
-- 修改具体模块时，应至少覆盖一个对应的集成测试
+- 修改具体 issue 时，应至少覆盖一个对应的集成测试
 
 ## 文档与版本
 
 - 对外可见的结构变化应更新 `README.md`
 - 版本变化和重要工程里程碑应更新 `CHANGELOG.md`
-- 新增模块时，应补模块自己的 `README.md`
+- 新增 issue 时，应补该 issue 自己的 `README.md`
 
 ## 提交约定
 

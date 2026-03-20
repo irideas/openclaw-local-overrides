@@ -1,12 +1,23 @@
 # Changelog
 
-本文档记录 `openclaw-local-overrides` 的版本演进。
+本文档记录 `openclaw-guardian` 的版本演进。
 
 版本号当前采用语义化版本风格：
 
 - 主版本：出现不兼容的结构调整
 - 次版本：增加新能力、扩展模块框架
 - 修订版本：修复问题、补充测试或文档
+
+## 0.7.3 - 2026-03-20
+
+### Changed
+
+- 项目名切换为 `openclaw-guardian`
+- 仓库结构切换为以 `issues/` 为中心，公共能力收敛到 `core/`
+- `openai-codex-auth-proxy` 迁移为 issue `openai-codex-oauth-proxy-failure`
+- 运行时启停配置切换为 `runtime/config/enabled-issues.json`
+- 单测与集成测试全部切换到 issue-centric 命名
+- README、测试文档与人工 E2E 文档统一到 guardian / issue 叙事
 
 ## 0.7.1 - 2026-03-20
 

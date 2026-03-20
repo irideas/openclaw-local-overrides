@@ -4,14 +4,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 
-// 这是 `openai-codex-auth-proxy` 模块自己的 Node preload 实现。
+// 这是 `openai-codex-oauth-proxy-failure` 这个 issue 的 `runtime` 实现。
 //
-// 模块职责很单一：
+// 当前 issue 的运行时职责很单一：
 // 1. 为当前 `openclaw` 进程安装 `EnvHttpProxyAgent`
 // 2. 只对 `https://auth.openai.com/oauth/token` 这个端点增加极窄的 `curl fallback`
 //
-// 它不再负责命令匹配、配置读取或统一接入。
-// 这些工作已经转移到 `bootstrap/node-preload-entry.mjs`。
+// 它不负责 issue 发现、能力启停或统一接入。
+// 这些工作已经转移到 `runtime/bootstrap/node-entry.mjs`
+// 和 `core/runtime-runner.mjs`。
 
 function normalize(value) {
   // 和公共运行时保持相同的空值归一策略，避免字符串判断出现分叉。
@@ -20,7 +21,7 @@ function normalize(value) {
 }
 
 function resolveEffectiveProxy() {
-  // 当前模块只关心 HTTP(S) 代理。
+  // 当前 issue 只关心 HTTP(S) 代理。
   // 这里明确不读 `ALL_PROXY`，避免把 shell 中残留的其他代理语义混入进来。
   return (
     normalize(process.env.https_proxy) ||
@@ -31,7 +32,7 @@ function resolveEffectiveProxy() {
 }
 
 function isOpenAITokenEndpoint(url) {
-  // 模块只对这一个端点做 `curl fallback`，
+  // 当前 issue 只对这一个端点做 `curl fallback`，
   // 以确保影响范围尽可能小。
   return url === "https://auth.openai.com/oauth/token";
 }
@@ -95,7 +96,7 @@ async function waitForProcessResult(child, stdoutPath, stderrPath) {
 }
 
 async function curlFetchThroughProxy(request, effectiveProxy, log) {
-  // 这是模块最关键的兼容层：
+  // 这是当前 issue 最关键的兼容层：
   // 仅在 `oauth/token` 这个端点上，用 `curl -x <proxy>` 取代原始 `fetch`。
   //
   // 这样做不是因为 `curl` 更“高级”，而是因为本地实验已经证明：
@@ -217,7 +218,7 @@ function installCurlFallbackFetch(effectiveProxy, log) {
 }
 
 function resolveOpenClawRoot() {
-  // 当前模块必须定位“正在执行的 openclaw 安装目录”，
+  // 当前 issue 必须定位“正在执行的 openclaw 安装目录”，
   // 以便从那个目录里加载与其版本匹配的 `undici`。
   //
   // 这样可以避免：
@@ -255,13 +256,14 @@ function resolveOpenClawRoot() {
 }
 
 export async function activate(context) {
-  // `activate()` 是统一运行时约定的模块入口。
-  // 运行时已经负责：
-  // - 模块发现
-  // - manifest 匹配
-  // - 日志器注入
+  // `activate()` 是 guardian 约定的 issue runtime 入口。
+  // 公共运行时已经负责：
+  // - issue 发现
+  // - triggers 匹配
+  // - 启停配置求值
+  // - 日志器与 locale 注入
   //
-  // 本模块在这里只聚焦自己的网络修复逻辑。
+  // 所以这里应只聚焦本 issue 的网络修复逻辑。
   const log = context.log;
   const effectiveProxy = resolveEffectiveProxy();
 
@@ -272,7 +274,7 @@ export async function activate(context) {
 
   if (process.env.OPENCLAW_PROXY_PRELOAD_DISABLE === "1") {
     // 保留旧开关只是为了兼容既有调试习惯；
-    // 它现在只影响模块本身，不再影响整个框架的模块发现。
+    // 它现在只影响当前 issue 的 runtime，不再影响整个框架的 issue 发现。
     log("preload_skipped", { reason: "legacy_disable" });
     return;
   }

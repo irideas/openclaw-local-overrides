@@ -1,6 +1,6 @@
 # Testing Strategy
 
-本文档描述 `openclaw-local-overrides` 的测试分层策略。
+本文档描述 `openclaw-guardian` 的测试分层策略。
 
 目标不是追求“所有东西都自动化”，而是把不同性质的验证拆开：
 
@@ -10,7 +10,7 @@
 
 这样做的原因是：
 
-- 本仓库的部分模块本质上是在修复真实环境中的网络行为
+- 本仓库的部分 issue 本质上是在修复真实环境中的网络行为
 - 这类行为很难用纯单测充分证明
 - 如果强行把外部依赖塞进 `unit test`，会让测试不稳定、不可重复，也会让 CI 失真
 
@@ -39,8 +39,8 @@
 
 ### 适合覆盖的内容
 
-- manifest schema 校验
-- 模块发现
+- issue schema 校验
+- issue 发现
 - 默认启用 / 显式启用 / 显式禁用规则
 - CLI 参数匹配规则
 - provider 提取逻辑
@@ -57,7 +57,7 @@
 
 ### 当前对应
 
-- [module-runtime.test.mjs](../test/module-runtime.test.mjs)
+- [issue-loader.test.mjs](../test/issue-loader.test.mjs)
 
 ## 2. Integration-Local
 
@@ -72,11 +72,11 @@
 
 它的目标不是证明整个 OAuth 流程完成，而是证明：
 
-> 模块的接管机制、代理注入和回退逻辑，确实在真实环境里被执行了
+> issue 的接管机制、代理注入和回退逻辑，确实在真实环境里被执行了
 
 ### 适合覆盖的内容
 
-- 统一 preload 路由是否能命中模块
+- 统一 runtime 路由是否能命中 issue
 - Bash 入口是否能正确注入统一 preload
 - `curl fallback` 是否真的生效
 - 对假 `oauth/token` 请求是否返回预期的 `401 token_expired`
@@ -91,7 +91,7 @@
 
 ### 当前对应
 
-- [openai-codex-auth-proxy.integration.test.mjs](../test/openai-codex-auth-proxy.integration.test.mjs)
+- [openai-codex-oauth-proxy-failure.integration.test.mjs](../test/openai-codex-oauth-proxy-failure.integration.test.mjs)
 
 ### 结论
 
@@ -152,7 +152,7 @@ openclaw models auth login --provider openai-codex
 
 ### 这层为什么必须保留
 
-因为 `openai-codex-auth-proxy` 的根本目标不是“假 token 返回 401”，
+因为 `openai-codex-oauth-proxy-failure` 的根本目标不是“假 token 返回 401”，
 而是：
 
 > 真实 OAuth 在真实环境中最终成功
@@ -170,11 +170,11 @@ openclaw models auth login --provider openai-codex
 
 ### 结论
 
-对这类模块来说，`manual-e2e` 不是失败，而是必要层。
+对这类 issue 来说，`manual-e2e` 不是失败，而是必要层。
 
-## 为什么 `openai-codex-auth-proxy` 不能只靠 Unit Test 证明
+## 为什么 `openai-codex-oauth-proxy-failure` 不能只靠 Unit Test 证明
 
-因为这个模块的真正价值不是一个纯函数结果，而是一个真实网络行为：
+因为这个 issue 的真正价值不是一个纯函数结果，而是一个真实网络行为：
 
 - `openclaw` CLI 的真实执行路径
 - `EnvHttpProxyAgent` 的真实代理接管
@@ -193,7 +193,7 @@ openclaw models auth login --provider openai-codex
 - `undici` 与 `curl` 在当前网络下真的表现不同
 - 真实 OAuth 最终真的能成功
 
-因此，对这个模块的正确策略不是：
+因此，对这个 issue 的正确策略不是：
 
 > 把所有验证都做成 unit test
 
@@ -227,7 +227,7 @@ openclaw models auth login --provider openai-codex
 用途：
 
 - 验证真实代理链路
-- 验证模块接管机制
+- 验证 issue 接管机制
 
 执行位置：
 

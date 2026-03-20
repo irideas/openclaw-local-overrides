@@ -1,0 +1,35 @@
+{
+  "id": "openai-codex-oauth-proxy-failure",
+  "title": "OpenAI Codex OAuth token exchange fails behind HTTP proxy",
+  "category": "auth",
+  "severity": "error",
+  "summary": "Fix OpenAI Codex OAuth token exchange behind HTTP proxy environments.",
+  "enabledByDefault": true,
+  "capabilities": {
+    "preflight": false,
+    "runtime": true,
+    "repair": false
+  },
+  "triggers": {
+    "argvAll": ["models", "auth", "login"],
+    "provider": "openai-codex"
+  },
+  "entry": {
+    "runtime": "./runtime.mjs"
+  },
+  "env": {
+    "variables": [
+      "OPENCLAW_PROXY_PRELOAD_DISABLE",
+      "OPENCLAW_PROXY_CURL_FALLBACK_DISABLE",
+      "OPENCLAW_PROXY_PRELOAD_STDERR",
+      "OPENCLAW_PROXY_PRELOAD_OPENCLAW_ROOT"
+    ]
+  },
+  "logging": {
+    "file": "openai-codex-oauth-proxy-failure.log"
+  },
+  "upstream": {
+    "recommendedCommands": ["openclaw doctor"],
+    "coverage": "partial"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "summary": "OpenAI Codex OAuth token exchange may fail behind HTTP proxy environments.",
+  "suggestion.check_proxy": "Check the configured HTTP proxy and retry the login flow."
+}

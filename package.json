@@ -1,14 +1,14 @@
 {
-  "name": "openclaw-local-overrides",
-  "version": "0.7.2",
-  "description": "Local override framework and modules for OpenClaw.",
+  "name": "openclaw-guardian",
+  "version": "0.7.3",
+  "description": "Issue-centric local guardrails, runtime mitigations, and repairs for OpenClaw.",
   "private": true,
   "license": "MIT",
   "type": "module",
   "scripts": {
     "test": "npm run test:unit",
     "test:all": "node --test test/*.test.mjs",
-    "test:unit": "node --test test/module-runtime.test.mjs",
-    "test:integration": "node --test test/openai-codex-auth-proxy.integration.test.mjs"
+    "test:unit": "node --test test/issue-loader.test.mjs",
+    "test:integration": "node --test test/openai-codex-oauth-proxy-failure.integration.test.mjs"
   }
 }

@@ -10,7 +10,7 @@ export const REPO_ROOT = path.resolve(TEST_DIR, "..");
 export const RUNTIME_ROOT = path.join(REPO_ROOT, "runtime");
 
 export function createTempLogDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-local-overrides-test-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-guardian-test-"));
 }
 
 export function cleanupDir(dirPath) {
@@ -18,10 +18,13 @@ export function cleanupDir(dirPath) {
 }
 
 export function createTempRepoFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-local-overrides-fixture-"));
-  // 临时夹具按照“仓库根 + runtime/”的真实布局创建，
-  // 这样测试覆盖的就是迁移后的运行时结构，而不是过时目录。
-  fs.mkdirSync(path.join(root, "runtime", "modules"), { recursive: true });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-guardian-fixture-"));
+  // issue-centric 重构后，夹具需要同时包含：
+  // - `issues/`：放 issue 元数据
+  // - `runtime/config/`：放启停覆盖
+  //
+  // 这样测试覆盖的就是“仓库根 + runtime 导出目录”的真实布局。
+  fs.mkdirSync(path.join(root, "issues"), { recursive: true });
   fs.mkdirSync(path.join(root, "runtime", "config"), { recursive: true });
   return root;
 }
