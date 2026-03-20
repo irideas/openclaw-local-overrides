@@ -8,13 +8,27 @@
 - 一组可启停的 `modules`
 - 一份集中配置 `config/enabled-modules.json`
 
+当前仓库版本：`0.4.0`
+
+版本演进请参考：
+
+- [CHANGELOG.md](./CHANGELOG.md)
+- [AGENTS.md](./AGENTS.md)
+
 ## 目录结构
 
 ```text
 local-overrides/
+  .github/
+    workflows/
+      test.yml
+  AGENTS.md
+  CHANGELOG.md
+  LICENSE
   bootstrap/
     bash-init.bash
     logger.mjs
+    module-runtime.mjs
     node-preload-entry.mjs
   config/
     enabled-modules.json
@@ -23,6 +37,9 @@ local-overrides/
       module.json
       preload-hook.mjs
       README.md
+  test/
+    *.test.mjs
+  package.json
 ```
 
 ## 设计原则
@@ -58,10 +75,10 @@ local-overrides/
 - `match.argvAll`
 - `match.provider`
 - `entry.preload`
-- `compat.legacyShellInit`
-- `compat.legacyPreload`
 - `env.variables`
 - `logging.file`
+
+仓库采用 [MIT License](./LICENSE)。
 
 ## 安装步骤
 
@@ -142,9 +159,9 @@ tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
 2. 每次执行 `openclaw ...` 时，
    统一注入 `bootstrap/node-preload-entry.mjs`
 3. `node-preload-entry.mjs`
-   读取 `config/enabled-modules.json`
+   发现模块并读取 `config/enabled-modules.json`
 4. 它根据当前 `process.argv`
-   匹配各模块的 `module.json`
+   与默认启用规则求值得到候选模块
 5. 命中的模块再加载自己的 `preload-hook.mjs`
 
 因此后续新增模块时，只需要：
@@ -188,6 +205,7 @@ export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
 
 - 公共运行时单测
 - `openai-codex-auth-proxy` 的集成测试
+- 最小 GitHub Actions 测试工作流
 
 运行方式：
 
@@ -198,6 +216,13 @@ export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
 unset ALL_PROXY
 unset all_proxy
 npm test
+```
+
+也可以分别执行：
+
+```bash
+npm run test:unit
+npm run test:integration
 ```
 
 如果要显式指定集成测试使用的代理，可以设置：

@@ -87,7 +87,7 @@ test("validateManifest 应当校验模块 id 与 preload 入口", () => {
   );
 });
 
-test("validateManifest 应当校验 kind 与 env/compat 字段", () => {
+test("validateManifest 应当校验 kind、enabledByDefault 与 env 字段", () => {
   assert.deepEqual(
     validateManifest("openai-codex-auth-proxy", {
       id: "openai-codex-auth-proxy",

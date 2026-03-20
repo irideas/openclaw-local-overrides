@@ -1,0 +1,64 @@
+# Changelog
+
+本文档记录 `openclaw-local-overrides` 的版本演进。
+
+版本号当前采用语义化版本风格：
+
+- 主版本：出现不兼容的结构调整
+- 次版本：增加新能力、扩展模块框架
+- 修订版本：修复问题、补充测试或文档
+
+## 0.4.0 - 2026-03-20
+
+### Added
+
+- 增加仓库级 `version` 元数据
+- 增加仓库级 [AGENTS.md](./AGENTS.md)
+- 增加本文件 `CHANGELOG.md`
+- 为 `bootstrap/*.mjs`、`bootstrap/*.bash`、模块 `preload-hook.mjs` 增补更完整的简体中文注释
+
+### Changed
+
+- 移除历史兼容目录 `openai-codex-auth-proxy/`
+- 模块 manifest 不再保留 `compat.*` 字段
+- 仓库文档改为只描述统一 `bootstrap + modules` 结构
+
+### Removed
+
+- 删除旧版兼容入口：
+  - `openai-codex-auth-proxy/bash-init.bash`
+  - `openai-codex-auth-proxy/env-proxy-preload.mjs`
+  - `openai-codex-auth-proxy/README.md`
+
+## 0.3.0 - 2026-03-20
+
+### Added
+
+- 标准化模块 manifest：
+  - `kind`
+  - `enabledByDefault`
+  - `env.variables`
+- 增加模块发现与默认启用策略
+- 增加相关单测和集成测试
+
+### Changed
+
+- `config/enabled-modules.json` 从“唯一启用列表”调整为“覆盖默认行为的配置层”
+
+## 0.2.0 - 2026-03-20
+
+### Added
+
+- 增加共享运行时模块 [bootstrap/module-runtime.mjs](./bootstrap/module-runtime.mjs)
+- 增加公共单测与集成测试
+- 增加 [package.json](./package.json) 与统一 `npm test` 测试入口
+
+## 0.1.0 - 2026-03-20
+
+### Added
+
+- 初始版 `bootstrap + modules + config` 结构
+- `openai-codex-auth-proxy` 模块
+- 统一 Bash 入口与统一 Node preload 路由
+- `EnvHttpProxyAgent + curl fallback` 方案
+

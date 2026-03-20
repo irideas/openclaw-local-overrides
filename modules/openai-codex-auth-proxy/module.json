@@ -10,10 +10,6 @@
   "entry": {
     "preload": "./preload-hook.mjs"
   },
-  "compat": {
-    "legacyShellInit": "../../openai-codex-auth-proxy/bash-init.bash",
-    "legacyPreload": "../../openai-codex-auth-proxy/env-proxy-preload.mjs"
-  },
   "env": {
     "variables": [
       "OPENCLAW_PROXY_PRELOAD_DISABLE",

@@ -14,11 +14,14 @@ import { spawn } from "node:child_process";
 // 这些工作已经转移到 `bootstrap/node-preload-entry.mjs`。
 
 function normalize(value) {
+  // 和公共运行时保持相同的空值归一策略，避免字符串判断出现分叉。
   const text = String(value || "").trim();
   return text || null;
 }
 
 function resolveEffectiveProxy() {
+  // 当前模块只关心 HTTP(S) 代理。
+  // 这里明确不读 `ALL_PROXY`，避免把 shell 中残留的其他代理语义混入进来。
   return (
     normalize(process.env.https_proxy) ||
     normalize(process.env.HTTPS_PROXY) ||
@@ -28,10 +31,17 @@ function resolveEffectiveProxy() {
 }
 
 function isOpenAITokenEndpoint(url) {
+  // 模块只对这一个端点做 `curl fallback`，
+  // 以确保影响范围尽可能小。
   return url === "https://auth.openai.com/oauth/token";
 }
 
 function parseCurlHeaderFile(text) {
+  // HTTPS 代理场景下，`curl -D` 可能同时写出：
+  // - `HTTP/1.1 200 Connection established`
+  // - 真实目标站点的最终响应头
+  //
+  // 这里始终取最后一个 HTTP 响应块作为真正的业务响应。
   const normalized = text.replace(/\r\n/g, "\n");
   const chunks = normalized
     .split(/\n\n+/)
@@ -66,6 +76,10 @@ function parseCurlHeaderFile(text) {
 }
 
 async function waitForProcessResult(child, stdoutPath, stderrPath) {
+  // `spawn` 的结果统一在这里汇总，便于上层逻辑只关心：
+  // - 退出码
+  // - stdout/stderr 内容
+  // 而不用在每个调用点重复写样板代码。
   return await new Promise((resolve, reject) => {
     child.once("error", reject);
     child.once("close", (code, signal) => {
@@ -81,6 +95,13 @@ async function waitForProcessResult(child, stdoutPath, stderrPath) {
 }
 
 async function curlFetchThroughProxy(request, effectiveProxy, log) {
+  // 这是模块最关键的兼容层：
+  // 仅在 `oauth/token` 这个端点上，用 `curl -x <proxy>` 取代原始 `fetch`。
+  //
+  // 这样做不是因为 `curl` 更“高级”，而是因为本地实验已经证明：
+  // - `undici + EnvHttpProxyAgent` 可以修复一部分代理问题
+  // - 但这一个端点在某些代理链路上仍可能超时
+  // - 同路径的 `curl` 却可以稳定返回 200/401
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-oauth-token-"));
   const headerPath = path.join(tempDir, "headers.txt");
   const bodyPath = path.join(tempDir, "body.txt");
@@ -102,6 +123,7 @@ async function curlFetchThroughProxy(request, effectiveProxy, log) {
     ];
 
     request.headers.forEach((value, key) => {
+      // `host` 和 `content-length` 由 `curl` 自己生成，避免和原请求冲突。
       const lower = key.toLowerCase();
       if (lower === "host" || lower === "content-length") return;
       args.push("-H", `${key}: ${value}`);
@@ -164,6 +186,8 @@ async function curlFetchThroughProxy(request, effectiveProxy, log) {
 }
 
 function installCurlFallbackFetch(effectiveProxy, log) {
+  // 这里不是覆盖整个进程的所有请求，而是保留原始 `fetch`，
+  // 只对单一已知异常端点做窄拦截。
   const originalFetch = globalThis.fetch?.bind(globalThis);
   if (!originalFetch) {
     log("curl_fallback_skipped", { reason: "global_fetch_missing" });
@@ -172,10 +196,13 @@ function installCurlFallbackFetch(effectiveProxy, log) {
 
   globalThis.fetch = async function patchedFetch(input, init) {
     const request = new Request(input, init);
+    // 除目标端点外，其他请求完全走原始链路。
     if (!isOpenAITokenEndpoint(request.url)) {
       return await originalFetch(input, init);
     }
 
+    // 保留一个可调试的关闭开关，便于以后对比：
+    // 是 `EnvHttpProxyAgent` 本身生效，还是 `curl fallback` 在兜底。
     if (process.env.OPENCLAW_PROXY_CURL_FALLBACK_DISABLE === "1") {
       return await originalFetch(input, init);
     }
@@ -190,6 +217,12 @@ function installCurlFallbackFetch(effectiveProxy, log) {
 }
 
 function resolveOpenClawRoot() {
+  // 当前模块必须定位“正在执行的 openclaw 安装目录”，
+  // 以便从那个目录里加载与其版本匹配的 `undici`。
+  //
+  // 这样可以避免：
+  // - 错用系统上其他版本的 `undici`
+  // - `nvm` / 多 Node 版本并存时的依赖错配
   const override = normalize(process.env.OPENCLAW_PROXY_PRELOAD_OPENCLAW_ROOT);
   if (override) return override;
 
@@ -222,6 +255,13 @@ function resolveOpenClawRoot() {
 }
 
 export async function activate(context) {
+  // `activate()` 是统一运行时约定的模块入口。
+  // 运行时已经负责：
+  // - 模块发现
+  // - manifest 匹配
+  // - 日志器注入
+  //
+  // 本模块在这里只聚焦自己的网络修复逻辑。
   const log = context.log;
   const effectiveProxy = resolveEffectiveProxy();
 
@@ -231,6 +271,8 @@ export async function activate(context) {
   });
 
   if (process.env.OPENCLAW_PROXY_PRELOAD_DISABLE === "1") {
+    // 保留旧开关只是为了兼容既有调试习惯；
+    // 它现在只影响模块本身，不再影响整个框架的模块发现。
     log("preload_skipped", { reason: "legacy_disable" });
     return;
   }
@@ -249,10 +291,14 @@ export async function activate(context) {
   const undiciPath = path.join(openclawRoot, "node_modules", "undici", "index.js");
 
   try {
+    // 这里显式加载“当前 openclaw 安装目录里的 undici”，
+    // 而不是依赖外部全局模块解析。
     const undici = await import(pathToFileURL(undiciPath).href);
     const agent = new undici.EnvHttpProxyAgent();
     undici.setGlobalDispatcher(agent);
 
+    // `EnvHttpProxyAgent` 负责修正绝大多数裸 `fetch(...)` 的代理感知，
+    // `curl fallback` 只负责已知异常的 token 端点。
     installCurlFallbackFetch(effectiveProxy, log);
 
     log("preload_activated", {
@@ -272,4 +318,3 @@ export async function activate(context) {
     });
   }
 }
-

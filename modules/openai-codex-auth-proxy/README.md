@@ -47,8 +47,6 @@ CLI 阶段的 `code -> token` 交换失败的问题。
 - `match.argvAll`
 - `match.provider`
 - `entry.preload`
-- `compat.legacyShellInit`
-- `compat.legacyPreload`
 - `env.variables`
 - `logging.file`
 
@@ -117,7 +115,7 @@ $HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
 OPENCLAW_LOCAL_OVERRIDES_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
-禁用本模块的旧版兼容开关：
+禁用本模块自身逻辑的调试开关：
 
 ```bash
 OPENCLAW_PROXY_PRELOAD_DISABLE=1 openclaw models auth login --provider openai-codex
@@ -161,12 +159,14 @@ npm test
 export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 ```
 
-## 兼容入口
+这里保留 `OPENCLAW_PROXY_PRELOAD_DISABLE`，
+主要是为了兼容既有调试习惯。
 
-为了兼容旧版本接入方式，仓库根下仍保留：
+## 版本与维护
 
-- `openai-codex-auth-proxy/bash-init.bash`
-- `openai-codex-auth-proxy/env-proxy-preload.mjs`
+本模块随仓库统一版本演进。
 
-但这两个文件现在只是兼容壳。
-正式实现以 `modules/openai-codex-auth-proxy/` 为准。
+相关信息见：
+
+- [CHANGELOG.md](../../CHANGELOG.md)
+- [AGENTS.md](../../AGENTS.md)
