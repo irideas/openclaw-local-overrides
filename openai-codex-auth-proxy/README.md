@@ -149,7 +149,19 @@ $HOME/.openclaw/local-overrides/openai-codex-auth-proxy/
 $HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
 ```
 
-## 接入方式
+## 安装步骤
+
+### 1. 准备目录
+
+将本模块放到：
+
+```text
+$HOME/.openclaw/local-overrides/openai-codex-auth-proxy/
+```
+
+如果你是通过仓库整体安装，本步骤通常已经完成。
+
+### 2. 在 Bash 启动文件中接入
 
 在 `~/.bash_profile` 中增加：
 
@@ -158,13 +170,40 @@ $HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
   source "$HOME/.openclaw/local-overrides/openai-codex-auth-proxy/bash-init.bash"
 ```
 
-之后重新打开一个 Bash 会话，或执行：
+### 3. 重新加载 Shell
+
+重新打开一个 Bash 会话，或执行：
 
 ```bash
 source ~/.bash_profile
 ```
 
-即可生效。
+### 4. 配置代理环境变量
+
+在运行目标命令前，当前 shell 需要已经设置好 HTTP 代理，例如：
+
+```bash
+export HTTP_PROXY=http://<your-http-proxy-host>:<port>
+export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
+unset ALL_PROXY
+unset all_proxy
+```
+
+### 5. 验证包装层是否生效
+
+执行：
+
+```bash
+type -a openclaw
+```
+
+如果接入成功，输出中通常会先看到：
+
+```text
+openclaw is a function
+```
+
+同时原始二进制路径仍应保留在后续输出中。
 
 ## 使用方式
 
@@ -174,14 +213,29 @@ source ~/.bash_profile
 openclaw models auth login --provider openai-codex
 ```
 
-前提是当前 shell 已经设置了正确的 HTTP 代理，例如：
+只要当前 shell 已经准备好了正确的代理环境变量，
+包装层就会在这条命令上自动注入 `preload`。
+
+## 快速验证
+
+如果你还不想立即做真实 OAuth 登录，可以先执行：
 
 ```bash
-export HTTP_PROXY=http://<your-http-proxy-host>:<port>
-export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
-unset ALL_PROXY
-unset all_proxy
+openclaw models auth login --provider openai-codex --help
 ```
+
+然后检查日志：
+
+```bash
+tail -n 20 "$HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log"
+```
+
+如果日志里能看到：
+
+- `source = "bash-init"` 且 `event = "inject_preload"`
+- `source = "env-proxy-preload"` 且 `event = "preload_activated"`
+
+说明这套覆盖逻辑已经成功接管目标命令。
 
 ## 作用范围
 
