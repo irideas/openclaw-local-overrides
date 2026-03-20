@@ -78,7 +78,7 @@
 
 ### 适合覆盖的内容
 
-- 统一 runtime 路由是否能命中 issue
+- 统一 mitigation 路由是否能命中 issue
 - Bash 入口是否能正确注入统一 preload
 - `curl fallback` 是否真的生效
 - 对假 `oauth/token` 请求是否返回预期的 `401 token_expired`
@@ -250,7 +250,7 @@ openclaw models auth login --provider openai-codex
 
 - 仓库可以位于任意 `<repo-dir>`
 - 但运行时软链接应当固定为：
-  `~/.openclaw/local-overrides -> <repo-dir>/runtime`
+  `~/.openclaw/guardian -> <repo-dir>/bridge`
 
 具体检查清单见：
 

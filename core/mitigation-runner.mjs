@@ -5,35 +5,37 @@ import { resolveLocale } from "./locale.mjs";
 import { loadIssueMessages, renderMessage } from "./i18n-renderer.mjs";
 import {
   discoverIssues,
+  evaluateIssueApplicability,
   matchesIssue,
+  matchesIssueSelector,
   parseForcedIssues,
   resolveActiveIssueIds,
+  resolveGuardianPaths,
   resolveIssueLogPath,
-  resolveRuntimePaths,
   validateIssue,
 } from "./issue-loader.mjs";
 
-// 这是 `guardian` 的统一 runtime runner。
+// 这是 `guardian` 的统一 mitigation runner。
 //
-// 它当前只负责 issue 的 `runtime` 能力面：
+// 它当前只负责 issue 的 `mitigation` 能力面：
 // - 发现 issue
 // - 解析启停配置
 // - 依据当前命令进行 issue 匹配
-// - 加载 issue 的 `runtime.mjs`
+// - 加载 issue 的 `mitigation.mjs`
 //
 // `preflight` 与 `repair` 在这个阶段先只搭骨架，不混进现有可用链路。
 
-const PATHS = resolveRuntimePaths();
+const PATHS = resolveGuardianPaths();
 const REPO_ROOT = PATHS.repoRoot;
-const RUNTIME_ROOT = PATHS.runtimeRoot;
+const BRIDGE_ROOT = PATHS.bridgeRoot;
 const ISSUES_ROOT = PATHS.issuesRoot;
 const OPENCLAW_HOME = PATHS.openclawHome;
 const LOG_DIR = PATHS.logDir;
 const ISSUE_CONFIG_PATH = PATHS.issueConfigPath;
-const RUNTIME_LOG_PATH = path.join(LOG_DIR, "runtime.log");
+const GUARDIAN_LOG_PATH = path.join(LOG_DIR, "guardian.log");
 const LOCALE = resolveLocale();
 
-const runtimeLog = createJsonlLogger(RUNTIME_LOG_PATH, "guardian.runtime", {
+const mitigationLog = createJsonlLogger(GUARDIAN_LOG_PATH, "guardian.mitigation", {
   locale: LOCALE,
 });
 
@@ -41,20 +43,20 @@ function isGuardianDisabled(env = process.env) {
   return env.OPENCLAW_GUARDIAN_DISABLE === "1";
 }
 
-async function activateRuntimeIssue(issueId, issue, issueDir) {
+async function activateMitigationIssue(issueId, issue, issueDir) {
   const validation = validateIssue(issueId, issue);
   if (!validation.ok) {
-    runtimeLog("issue_skipped", {
+    mitigationLog("issue_skipped", {
       issueId,
       reason: validation.reason,
     });
     return;
   }
 
-  if (issue.capabilities.runtime !== true) {
-    runtimeLog("issue_skipped", {
+  if (issue.capabilities.mitigation !== true) {
+    mitigationLog("issue_skipped", {
       issueId,
-      reason: "runtime_capability_disabled",
+      reason: "mitigation_capability_disabled",
     });
     return;
   }
@@ -65,12 +67,12 @@ async function activateRuntimeIssue(issueId, issue, issueDir) {
   });
 
   try {
-    const runtimeEntry = path.join(issueDir, issue.entry.runtime);
-    const issueModule = await import(pathToFileURL(runtimeEntry).href);
+    const mitigationEntry = path.join(issueDir, issue.entry.mitigation);
+    const issueModule = await import(pathToFileURL(mitigationEntry).href);
     if (typeof issueModule.activate !== "function") {
       issueLog("issue_skipped", {
         reason: "activate_missing",
-        runtimeEntry,
+        mitigationEntry,
       });
       return;
     }
@@ -85,7 +87,7 @@ async function activateRuntimeIssue(issueId, issue, issueDir) {
 
     await issueModule.activate({
       repoRoot: REPO_ROOT,
-      runtimeRoot: RUNTIME_ROOT,
+      bridgeRoot: BRIDGE_ROOT,
       openclawHome: OPENCLAW_HOME,
       issueId,
       issueDir,
@@ -94,7 +96,7 @@ async function activateRuntimeIssue(issueId, issue, issueDir) {
       messages,
       t,
       log: issueLog,
-      runtimeLog,
+      mitigationLog,
     });
 
     issueLog("issue_activate_done", {
@@ -108,9 +110,9 @@ async function activateRuntimeIssue(issueId, issue, issueDir) {
   }
 }
 
-export async function runRuntime() {
+export async function runMitigations() {
   if (isGuardianDisabled()) {
-    runtimeLog("runtime_skipped", { reason: "global_disable" });
+    mitigationLog("mitigation_skipped", { reason: "global_disable" });
     return;
   }
 
@@ -120,8 +122,9 @@ export async function runRuntime() {
   const activeIssueIds = resolveActiveIssueIds(ISSUES_ROOT, ISSUE_CONFIG_PATH);
   const activeSet = new Set(activeIssueIds);
 
-  runtimeLog("runtime_loaded", {
+  mitigationLog("mitigation_loaded", {
     argv: process.argv,
+    openclawVersion: PATHS.openclawVersion,
     issueConfigPath: ISSUE_CONFIG_PATH,
     discoveredIssues: discoveredIssues.map(({ issueId }) => issueId),
     activeIssueIds,
@@ -129,24 +132,30 @@ export async function runRuntime() {
   });
 
   for (const { issueId, issuePath, issue } of discoveredIssues) {
-    const forceMatch = forcedIssues.has(issueId);
+    const forceMatch = issue ? Array.from(forcedIssues).some((selector) => matchesIssueSelector(selector, issueId, issue)) : forcedIssues.has(issueId);
     const activeByConfig = activeSet.has(issueId);
+    const applicability = issue ? evaluateIssueApplicability(issue, PATHS.openclawVersion) : null;
+    const applicableByVersion = applicability ? applicability.active : false;
     const normalMatch = activeByConfig && issue ? matchesIssue(issue, args) : false;
 
-    runtimeLog("issue_evaluated", {
+    mitigationLog("issue_evaluated", {
       issueId,
       issuePath,
       activeByConfig,
+      applicableByVersion,
+      applicabilityReason: applicability?.reason || null,
+      openclawVersion: applicability?.openclawVersion || PATHS.openclawVersion || null,
+      versionRange: applicability?.versionRange || null,
       forceMatch,
       normalMatch,
     });
 
-    if (!forceMatch && !normalMatch) {
+    if (!forceMatch && (!normalMatch || !applicableByVersion)) {
       continue;
     }
 
     if (!issue) {
-      runtimeLog("issue_skipped", {
+      mitigationLog("issue_skipped", {
         issueId,
         reason: "issue_manifest_missing",
         issuePath,
@@ -155,6 +164,6 @@ export async function runRuntime() {
     }
 
     const issueDir = path.join(ISSUES_ROOT, issueId);
-    await activateRuntimeIssue(issueId, issue, issueDir);
+    await activateMitigationIssue(issueId, issue, issueDir);
   }
 }

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 export const TEST_DIR = path.dirname(CURRENT_FILE);
 export const REPO_ROOT = path.resolve(TEST_DIR, "..");
-export const RUNTIME_ROOT = path.join(REPO_ROOT, "runtime");
+export const BRIDGE_ROOT = path.join(REPO_ROOT, "bridge");
 
 export function createTempLogDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-guardian-test-"));
@@ -34,11 +34,11 @@ export function createTempRepoFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-guardian-fixture-"));
   // issue-centric 重构后，夹具需要同时包含：
   // - `issues/`：放 issue 元数据
-  // - `runtime/config/`：放启停覆盖
+  // - `bridge/config/`：放启停覆盖
   //
-  // 这样测试覆盖的就是“仓库根 + runtime 导出目录”的真实布局。
+  // 这样测试覆盖的就是“仓库根 + bridge 导出目录”的真实布局。
   fs.mkdirSync(path.join(root, "issues"), { recursive: true });
-  fs.mkdirSync(path.join(root, "runtime", "config"), { recursive: true });
+  fs.mkdirSync(path.join(root, "bridge", "config"), { recursive: true });
   return root;
 }
 

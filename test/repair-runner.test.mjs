@@ -8,8 +8,8 @@ import {
   createTempBundledOpenClawRoot,
   createTempLogDir,
   createTempOpenClawHome,
+  BRIDGE_ROOT,
   REPO_ROOT,
-  RUNTIME_ROOT,
   writeJson,
 } from "./test-helpers.mjs";
 
@@ -40,9 +40,10 @@ test("runRepair dry-run 应当生成修复计划但不修改文件", async () =>
         LANG: "en_US.UTF-8",
         OPENCLAW_GUARDIAN_HOME: openclawHome,
         OPENCLAW_GUARDIAN_REPO_ROOT: REPO_ROOT,
-        OPENCLAW_GUARDIAN_RUNTIME_ROOT: RUNTIME_ROOT,
+        OPENCLAW_GUARDIAN_BRIDGE_ROOT: BRIDGE_ROOT,
         OPENCLAW_GUARDIAN_LOG_DIR: logDir,
         OPENCLAW_GUARDIAN_OPENCLAW_ROOT: bundledRoot,
+        OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.3.13",
       },
       write: (text) => output.push(text),
     });
@@ -85,9 +86,10 @@ test("runRepair apply 应当备份本地扩展并移除安装引用", async () =
         LANG: "zh_CN.UTF-8",
         OPENCLAW_GUARDIAN_HOME: openclawHome,
         OPENCLAW_GUARDIAN_REPO_ROOT: REPO_ROOT,
-        OPENCLAW_GUARDIAN_RUNTIME_ROOT: RUNTIME_ROOT,
+        OPENCLAW_GUARDIAN_BRIDGE_ROOT: BRIDGE_ROOT,
         OPENCLAW_GUARDIAN_LOG_DIR: logDir,
         OPENCLAW_GUARDIAN_OPENCLAW_ROOT: bundledRoot,
+        OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.3.13",
       },
       write: () => {},
     });
@@ -100,6 +102,38 @@ test("runRepair apply 应当备份本地扩展并移除安装引用", async () =
 
     const config = JSON.parse(fs.readFileSync(path.join(openclawHome, "openclaw.json"), "utf8"));
     assert.equal(config.plugins.installs, undefined);
+  } finally {
+    cleanupDir(openclawHome);
+    cleanupDir(bundledRoot);
+    cleanupDir(logDir);
+  }
+});
+
+test("runRepair 在 issue 版本范围不匹配时应拒绝执行", async () => {
+  const openclawHome = createTempOpenClawHome();
+  const bundledRoot = createTempBundledOpenClawRoot();
+  const logDir = createTempLogDir();
+
+  try {
+    await assert.rejects(
+      () =>
+        runRepair({
+          issueId: "plugins-feishu-duplicate-id",
+          apply: false,
+          env: {
+            ...process.env,
+            LANG: "en_US.UTF-8",
+            OPENCLAW_GUARDIAN_HOME: openclawHome,
+            OPENCLAW_GUARDIAN_REPO_ROOT: REPO_ROOT,
+            OPENCLAW_GUARDIAN_BRIDGE_ROOT: BRIDGE_ROOT,
+            OPENCLAW_GUARDIAN_LOG_DIR: logDir,
+            OPENCLAW_GUARDIAN_OPENCLAW_ROOT: bundledRoot,
+            OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.4.0",
+          },
+          write: () => {},
+        }),
+      /not applicable/,
+    );
   } finally {
     cleanupDir(openclawHome);
     cleanupDir(bundledRoot);

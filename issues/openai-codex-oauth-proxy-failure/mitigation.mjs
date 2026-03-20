@@ -4,15 +4,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 
-// 这是 `openai-codex-oauth-proxy-failure` 这个 issue 的 `runtime` 实现。
+// 这是 `openai-codex-oauth-proxy-failure` 这个 issue 的 `mitigation` 实现。
 //
 // 当前 issue 的运行时职责很单一：
 // 1. 为当前 `openclaw` 进程安装 `EnvHttpProxyAgent`
 // 2. 只对 `https://auth.openai.com/oauth/token` 这个端点增加极窄的 `curl fallback`
 //
 // 它不负责 issue 发现、能力启停或统一接入。
-// 这些工作已经转移到 `runtime/bootstrap/node-entry.mjs`
-// 和 `core/runtime-runner.mjs`。
+// 这些工作已经转移到 `bridge/bootstrap/node-entry.mjs`
+// 和 `core/mitigation-runner.mjs`。
 
 function normalize(value) {
   // 和公共运行时保持相同的空值归一策略，避免字符串判断出现分叉。
@@ -204,10 +204,7 @@ function installCurlFallbackFetch(effectiveProxy, log) {
 
     // 保留一个可调试的关闭开关，便于以后对比：
     // 是 `EnvHttpProxyAgent` 本身生效，还是 `curl fallback` 在兜底。
-    if (
-      process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_CURL_FALLBACK_DISABLE ===
-      "1"
-    ) {
+    if (process.env.OPENCLAW_GUARDIAN_CODEX_AUTH_CURL_FALLBACK_DISABLE === "1") {
       return await originalFetch(input, init);
     }
 
@@ -228,7 +225,7 @@ function resolveOpenClawRoot() {
   // - 错用系统上其他版本的 `undici`
   // - `nvm` / 多 Node 版本并存时的依赖错配
   const override = normalize(
-    process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_OPENCLAW_ROOT
+    process.env.OPENCLAW_GUARDIAN_CODEX_AUTH_OPENCLAW_ROOT
   );
   if (override) return override;
 
@@ -261,7 +258,7 @@ function resolveOpenClawRoot() {
 }
 
 export async function activate(context) {
-  // `activate()` 是 guardian 约定的 issue runtime 入口。
+  // `activate()` 是 guardian 约定的 issue mitigation 入口。
   // 公共运行时已经负责：
   // - issue 发现
   // - triggers 匹配
@@ -277,10 +274,10 @@ export async function activate(context) {
     effectiveProxy,
   });
 
-  if (process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_DISABLE === "1") {
-    // 这个开关只关闭当前 issue 的 runtime 缓解逻辑，
+  if (process.env.OPENCLAW_GUARDIAN_CODEX_AUTH_DISABLE === "1") {
+    // 这个开关只关闭当前 issue 的 mitigation 缓解逻辑，
     // 不影响 guardian 的 issue 发现、preflight 或 repair。
-    log("preload_skipped", { reason: "issue_runtime_disabled" });
+    log("preload_skipped", { reason: "issue_mitigation_disabled" });
     return;
   }
 
@@ -315,7 +312,7 @@ export async function activate(context) {
       dispatcher: agent.constructor?.name || "unknown",
     });
 
-    if (process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_STDERR === "1") {
+    if (process.env.OPENCLAW_GUARDIAN_CODEX_AUTH_STDERR === "1") {
       console.error(`[openclaw-guardian] EnvHttpProxyAgent enabled for ${effectiveProxy}`);
     }
   } catch (error) {

@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // 这一层把“issue 发现 / 校验 / 激活求值”的公共能力集中在一起。
 //
 // 重构后的中心模型已经从 `modules` 切换为 `issues`，所以这里不再把：
-// - runtime
+// - mitigation
 // - preflight
 // - repair
 // 看成顶层对象，而是把它们视为 issue 的不同能力面。
@@ -14,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 const CORE_DIR = path.dirname(CURRENT_FILE);
 const DEFAULT_REPO_ROOT = path.resolve(CORE_DIR, "..");
-const DEFAULT_RUNTIME_ROOT = path.join(DEFAULT_REPO_ROOT, "runtime");
+const DEFAULT_BRIDGE_ROOT = path.join(DEFAULT_REPO_ROOT, "bridge");
 const DEFAULT_OPENCLAW_HOME = path.join(os.homedir(), ".openclaw");
 
 export function normalize(value) {
@@ -22,8 +23,128 @@ export function normalize(value) {
   return text || null;
 }
 
+export function normalizeIssueAlias(issue) {
+  return normalize(issue?.alias);
+}
+
+export function parseVersion(version) {
+  const text = normalize(version);
+  if (!text || !/^\d+(?:\.\d+)*$/.test(text)) {
+    return null;
+  }
+
+  return text.split(".").map((part) => Number(part));
+}
+
+export function compareVersions(left, right) {
+  const a = Array.isArray(left) ? left : parseVersion(left);
+  const b = Array.isArray(right) ? right : parseVersion(right);
+  if (!a || !b) {
+    return null;
+  }
+
+  const length = Math.max(a.length, b.length);
+  for (let index = 0; index < length; index += 1) {
+    const av = a[index] ?? 0;
+    const bv = b[index] ?? 0;
+    if (av > bv) return 1;
+    if (av < bv) return -1;
+  }
+
+  return 0;
+}
+
+function matchVersionComparator(version, comparator) {
+  const match = String(comparator).trim().match(/^(>=|<=|>|<|=)?\s*(\d+(?:\.\d+)*)$/);
+  if (!match) {
+    return false;
+  }
+
+  const operator = match[1] || "=";
+  const target = match[2];
+  const compared = compareVersions(version, target);
+  if (compared === null) {
+    return false;
+  }
+
+  if (operator === "=") return compared === 0;
+  if (operator === ">") return compared > 0;
+  if (operator === ">=") return compared >= 0;
+  if (operator === "<") return compared < 0;
+  if (operator === "<=") return compared <= 0;
+  return false;
+}
+
+export function matchesVersionRange(version, versionRange) {
+  const parsedVersion = parseVersion(version);
+  const rangeText = normalize(versionRange);
+  if (!rangeText) {
+    return true;
+  }
+
+  if (!parsedVersion) {
+    return false;
+  }
+
+  const comparators = rangeText.split(/\s+/).filter(Boolean);
+  if (comparators.length === 0) {
+    return true;
+  }
+
+  return comparators.every((comparator) => matchVersionComparator(parsedVersion, comparator));
+}
+
 export function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function resolveDefaultOpenClawRootFromNode() {
+  try {
+    const versionRoot = path.resolve(process.execPath, "..", "..");
+    const candidate = path.join(versionRoot, "lib", "node_modules", "openclaw");
+    if (fs.existsSync(path.join(candidate, "package.json"))) {
+      return candidate;
+    }
+  } catch {
+    // 继续尝试其他方式。
+  }
+
+  return null;
+}
+
+function resolveOpenClawVersionFromRoot(openclawRoot) {
+  const root = normalize(openclawRoot);
+  if (!root) return null;
+
+  try {
+    const packageJsonPath = path.join(root, "package.json");
+    const packageJson = readJson(packageJsonPath);
+    return normalize(packageJson.version);
+  } catch {
+    return null;
+  }
+}
+
+function resolveOpenClawVersionFromBinary(env = process.env) {
+  try {
+    const result = spawnSync("openclaw", ["--version"], {
+      encoding: "utf8",
+      env: {
+        ...env,
+        OPENCLAW_GUARDIAN_DISABLE: "1",
+      },
+    });
+
+    if (result.status !== 0) {
+      return null;
+    }
+
+    const output = `${result.stdout || ""}\n${result.stderr || ""}`;
+    const match = output.match(/OpenClaw\s+(\d+(?:\.\d+)*)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 function resolveEnvValue(env, ...names) {
@@ -34,22 +155,30 @@ function resolveEnvValue(env, ...names) {
   return null;
 }
 
-export function resolveRuntimePaths(env = process.env) {
+export function resolveGuardianPaths(env = process.env) {
   const repoRoot = resolveEnvValue(env, "OPENCLAW_GUARDIAN_REPO_ROOT") || DEFAULT_REPO_ROOT;
-  const runtimeRoot = resolveEnvValue(env, "OPENCLAW_GUARDIAN_RUNTIME_ROOT") || DEFAULT_RUNTIME_ROOT;
+  const bridgeRoot = resolveEnvValue(env, "OPENCLAW_GUARDIAN_BRIDGE_ROOT") || DEFAULT_BRIDGE_ROOT;
   const openclawHome = resolveEnvValue(env, "OPENCLAW_GUARDIAN_HOME") || DEFAULT_OPENCLAW_HOME;
+  const openclawRoot =
+    resolveEnvValue(env, "OPENCLAW_GUARDIAN_OPENCLAW_ROOT") || resolveDefaultOpenClawRootFromNode();
+  const openclawVersion =
+    resolveEnvValue(env, "OPENCLAW_GUARDIAN_OPENCLAW_VERSION") ||
+    resolveOpenClawVersionFromRoot(openclawRoot) ||
+    resolveOpenClawVersionFromBinary(env);
   const logDir =
     resolveEnvValue(env, "OPENCLAW_GUARDIAN_LOG_DIR") ||
-    path.join(openclawHome, "logs", "local-overrides");
+    path.join(openclawHome, "logs", "guardian");
   const issueConfigPath =
     resolveEnvValue(env, "OPENCLAW_GUARDIAN_ISSUE_CONFIG_PATH") ||
-    path.join(runtimeRoot, "config", "enabled-issues.json");
+    path.join(bridgeRoot, "config", "enabled-issues.json");
 
   return {
     repoRoot,
-    runtimeRoot,
+    bridgeRoot,
     issuesRoot: path.join(repoRoot, "issues"),
     openclawHome,
+    openclawRoot,
+    openclawVersion,
     logDir,
     issueConfigPath,
   };
@@ -72,6 +201,17 @@ export function readIssue(issuesRoot, issueId) {
     issuePath,
     issue: readJson(issuePath),
   };
+}
+
+export function matchesIssueSelector(selector, issueId, issue) {
+  const normalizedSelector = normalize(selector);
+  if (!normalizedSelector) return false;
+  if (normalizedSelector === issueId) return true;
+  return normalizedSelector === normalizeIssueAlias(issue);
+}
+
+export function resolveIssueBySelector(discoveredIssues, selector) {
+  return discoveredIssues.find(({ issueId, issue }) => matchesIssueSelector(selector, issueId, issue)) || null;
 }
 
 export function discoverIssues(issuesRoot) {
@@ -160,6 +300,13 @@ export function validateIssue(issueId, issue) {
     return { ok: false, reason: "issue_category_missing" };
   }
 
+  if (
+    issue.alias !== undefined &&
+    (!normalize(issue.alias) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(issue.alias))
+  ) {
+    return { ok: false, reason: "issue_alias_invalid" };
+  }
+
   if (!normalize(issue.severity)) {
     return { ok: false, reason: "issue_severity_missing" };
   }
@@ -175,8 +322,8 @@ export function validateIssue(issueId, issue) {
     return { ok: false, reason: "issue_capabilities_invalid" };
   }
 
-  if (issue.capabilities.runtime === true && !normalize(issue.entry?.runtime)) {
-    return { ok: false, reason: "issue_runtime_entry_missing" };
+  if (issue.capabilities.mitigation === true && !normalize(issue.entry?.mitigation)) {
+    return { ok: false, reason: "issue_mitigation_entry_missing" };
   }
 
   if (issue.capabilities.preflight === true && !normalize(issue.entry?.preflight)) {
@@ -203,6 +350,13 @@ export function validateIssue(issueId, issue) {
   }
 
   if (
+    issue.env?.prefix !== undefined &&
+    normalize(issue.env.prefix) === null
+  ) {
+    return { ok: false, reason: "issue_env_prefix_invalid" };
+  }
+
+  if (
     issue.triggers?.commands !== undefined &&
     (!Array.isArray(issue.triggers.commands) ||
       issue.triggers.commands.some(
@@ -213,6 +367,34 @@ export function validateIssue(issueId, issue) {
       ))
   ) {
     return { ok: false, reason: "issue_triggers_commands_invalid" };
+  }
+
+  if (
+    issue.appliesTo !== undefined &&
+    (typeof issue.appliesTo !== "object" || Array.isArray(issue.appliesTo))
+  ) {
+    return { ok: false, reason: "issue_applies_to_invalid" };
+  }
+
+  if (
+    issue.appliesTo?.openclaw !== undefined &&
+    (typeof issue.appliesTo.openclaw !== "object" || Array.isArray(issue.appliesTo.openclaw))
+  ) {
+    return { ok: false, reason: "issue_applies_to_openclaw_invalid" };
+  }
+
+  if (
+    issue.appliesTo?.openclaw?.versionRange !== undefined &&
+    normalize(issue.appliesTo.openclaw.versionRange) === null
+  ) {
+    return { ok: false, reason: "issue_version_range_invalid" };
+  }
+
+  if (
+    issue.appliesTo?.openclaw?.whenUnknown !== undefined &&
+    !["active", "inactive"].includes(issue.appliesTo.openclaw.whenUnknown)
+  ) {
+    return { ok: false, reason: "issue_when_unknown_invalid" };
   }
 
   return { ok: true, reason: null };
@@ -230,6 +412,37 @@ export function resolveDisabledIssues(configPath) {
 
 export function isEnabledByDefault(issue) {
   return issue?.enabledByDefault === true;
+}
+
+export function evaluateIssueApplicability(issue, openclawVersion) {
+  const versionRange = normalize(issue?.appliesTo?.openclaw?.versionRange);
+  const whenUnknown = issue?.appliesTo?.openclaw?.whenUnknown || "inactive";
+  const currentVersion = normalize(openclawVersion);
+
+  if (!versionRange) {
+    return {
+      active: true,
+      reason: "no_version_gate",
+      openclawVersion: currentVersion,
+      versionRange: null,
+    };
+  }
+
+  if (!currentVersion) {
+    return {
+      active: whenUnknown === "active",
+      reason: "openclaw_version_unknown",
+      openclawVersion: null,
+      versionRange,
+    };
+  }
+
+  return {
+    active: matchesVersionRange(currentVersion, versionRange),
+    reason: "version_range_evaluated",
+    openclawVersion: currentVersion,
+    versionRange,
+  };
 }
 
 export function resolveActiveIssueIds(issuesRoot, issueConfigPath) {
@@ -263,7 +476,7 @@ export function resolveIssueLogPath(logDir, issue, issueId) {
 }
 
 export function resolveIssueContext(issueId, env = process.env) {
-  const paths = resolveRuntimePaths(env);
+  const paths = resolveGuardianPaths(env);
   const { issuePath, issue } = readIssue(paths.issuesRoot, issueId);
   return {
     ...paths,

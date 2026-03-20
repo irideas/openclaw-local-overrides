@@ -11,12 +11,12 @@ import {
   runProcess,
 } from "./test-helpers.mjs";
 
-const BOOTSTRAP_ENTRY = path.join(REPO_ROOT, "runtime", "bootstrap", "node-entry.mjs");
-const BOOTSTRAP_BASH = path.join(REPO_ROOT, "runtime", "bootstrap", "bash-init.bash");
+const BOOTSTRAP_ENTRY = path.join(REPO_ROOT, "bridge", "bootstrap", "node-entry.mjs");
+const BOOTSTRAP_BASH = path.join(REPO_ROOT, "bridge", "bootstrap", "bash-init.bash");
 const ISSUE_ID = "openai-codex-oauth-proxy-failure";
 const ISSUE_LOG = "openai-codex-oauth-proxy-failure.log";
 
-test("统一 runtime 路由应能跑通 openai-codex OAuth 代理问题的假 token 交换", () => {
+test("统一 mitigation 路由应能跑通 openai-codex OAuth 代理问题的假 token 交换", () => {
   const logDir = createTempLogDir();
   const proxy = resolveProxyForTests();
 
@@ -27,6 +27,7 @@ test("统一 runtime 路由应能跑通 openai-codex OAuth 代理问题的假 to
       HTTPS_PROXY: proxy,
       OPENCLAW_GUARDIAN_LOG_DIR: logDir,
       OPENCLAW_GUARDIAN_FORCE_ISSUES: ISSUE_ID,
+      OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.3.13",
     };
     delete env.ALL_PROXY;
     delete env.all_proxy;
@@ -58,11 +59,11 @@ test("统一 runtime 路由应能跑通 openai-codex OAuth 代理问题的假 to
     assert.equal(payload.status, 401);
     assert.match(payload.body, /token_expired/);
 
-    const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
+    const guardianLog = fs.readFileSync(path.join(logDir, "guardian.log"), "utf8");
     const issueLog = fs.readFileSync(path.join(logDir, ISSUE_LOG), "utf8");
 
-    assert.match(runtimeLog, /"activeIssueIds":\[[^\]]*"openai-codex-oauth-proxy-failure"/);
-    assert.match(runtimeLog, /"forceMatch":true/);
+    assert.match(guardianLog, /"activeIssueIds":\[[^\]]*"openai-codex-oauth-proxy-failure"/);
+    assert.match(guardianLog, /"forceMatch":true/);
     assert.match(issueLog, /"event":"curl_fallback_succeeded".*"status":401/);
   } finally {
     cleanupDir(logDir);
@@ -84,6 +85,7 @@ test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex OA
       HTTP_PROXY: proxy,
       HTTPS_PROXY: proxy,
       OPENCLAW_GUARDIAN_LOG_DIR: logDir,
+      OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.3.13",
     };
     delete env.ALL_PROXY;
     delete env.all_proxy;
@@ -99,11 +101,11 @@ test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex OA
 
     assert.equal(result.status, 0, result.stderr);
 
-    const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
+    const guardianLog = fs.readFileSync(path.join(logDir, "guardian.log"), "utf8");
     const issueLog = fs.readFileSync(path.join(logDir, ISSUE_LOG), "utf8");
 
-    assert.match(runtimeLog, /"activeByConfig":true/);
-    assert.match(runtimeLog, /"normalMatch":true/);
+    assert.match(guardianLog, /"activeByConfig":true/);
+    assert.match(guardianLog, /"normalMatch":true/);
     assert.match(issueLog, /"event":"preload_activated"/);
   } finally {
     cleanupDir(logDir);

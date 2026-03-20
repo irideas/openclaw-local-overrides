@@ -8,8 +8,8 @@ import {
   createTempBundledOpenClawRoot,
   createTempLogDir,
   createTempOpenClawHome,
+  BRIDGE_ROOT,
   REPO_ROOT,
-  RUNTIME_ROOT,
   writeJson,
 } from "./test-helpers.mjs";
 
@@ -31,9 +31,10 @@ test("runPreflights 应当输出匹配 issue 的中文提示", async () => {
         LANG: "zh_CN.UTF-8",
         OPENCLAW_GUARDIAN_HOME: openclawHome,
         OPENCLAW_GUARDIAN_REPO_ROOT: REPO_ROOT,
-        OPENCLAW_GUARDIAN_RUNTIME_ROOT: RUNTIME_ROOT,
+        OPENCLAW_GUARDIAN_BRIDGE_ROOT: BRIDGE_ROOT,
         OPENCLAW_GUARDIAN_LOG_DIR: logDir,
         OPENCLAW_GUARDIAN_OPENCLAW_ROOT: bundledRoot,
+        OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.3.13",
       },
       argv: ["gateway", "restart"],
       write: (text) => output.push(text),
@@ -41,7 +42,43 @@ test("runPreflights 应当输出匹配 issue 的中文提示", async () => {
 
     assert.equal(findings.length, 1);
     assert.match(output.join(""), /检测到额外的本地 `feishu` 插件/);
-    assert.match(output.join(""), /guardian repair plugins-feishu-duplicate-id --dry-run/);
+    assert.match(output.join(""), /guardian repair feishu-dup --dry-run/);
+  } finally {
+    cleanupDir(openclawHome);
+    cleanupDir(bundledRoot);
+    cleanupDir(logDir);
+  }
+});
+
+test("runPreflights 在 issue 版本范围不匹配时应跳过提示", async () => {
+  const openclawHome = createTempOpenClawHome();
+  const bundledRoot = createTempBundledOpenClawRoot();
+  const logDir = createTempLogDir();
+  const output = [];
+
+  try {
+    fs.mkdirSync(path.join(openclawHome, "extensions", "feishu"), { recursive: true });
+    writeJson(path.join(openclawHome, "openclaw.json"), {
+      plugins: {},
+    });
+
+    const findings = await runPreflights({
+      env: {
+        ...process.env,
+        LANG: "zh_CN.UTF-8",
+        OPENCLAW_GUARDIAN_HOME: openclawHome,
+        OPENCLAW_GUARDIAN_REPO_ROOT: REPO_ROOT,
+        OPENCLAW_GUARDIAN_BRIDGE_ROOT: BRIDGE_ROOT,
+        OPENCLAW_GUARDIAN_LOG_DIR: logDir,
+        OPENCLAW_GUARDIAN_OPENCLAW_ROOT: bundledRoot,
+        OPENCLAW_GUARDIAN_OPENCLAW_VERSION: "2026.4.0",
+      },
+      argv: ["gateway", "restart"],
+      write: (text) => output.push(text),
+    });
+
+    assert.equal(findings.length, 0);
+    assert.equal(output.join(""), "");
   } finally {
     cleanupDir(openclawHome);
     cleanupDir(bundledRoot);

@@ -1,10 +1,12 @@
 {
+  "meta.title": "Bundled and local feishu plugins share the same plugin id",
+  "meta.summary": "Detect duplicate local feishu plugin state before OpenClaw loads conflicting plugins.",
   "preflight.summary": "Detected an extra local feishu plugin that conflicts with the bundled feishu plugin.",
   "preflight.detail.externalDir": "Local extension directory exists at {path}.",
   "preflight.detail.installRef": "openclaw.json still contains an explicit feishu install reference.",
   "preflight.detail.allowMissing": "plugins.allow is empty or missing, so non-bundled plugins may still be auto-discovered.",
   "suggestion.doctor": "Run `openclaw plugins doctor` to review plugin health.",
-  "suggestion.repair": "Run `guardian repair plugins-feishu-duplicate-id --dry-run` to inspect the planned fix.",
+  "suggestion.repair": "Run `guardian repair feishu-dup --dry-run` to inspect the planned fix.",
   "repair.noop.summary": "No duplicate local feishu plugin state was detected.",
   "repair.dryRun.summary": "Dry-run prepared a repair plan for the duplicate local feishu plugin state.",
   "repair.apply.summary": "Applied the repair plan for the duplicate local feishu plugin state.",

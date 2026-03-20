@@ -49,13 +49,13 @@
 - 当前具备哪些治理能力
 - 如何验证
 
-### 3.2 `preflight`、`runtime`、`repair` 是能力面
+### 3.2 `preflight`、`mitigation`、`repair` 是能力面
 
 issue 可以按需具备三种能力面：
 
 - `preflight`
   在命令执行前发现风险并给出提示
-- `runtime`
+- `mitigation`
   在命中的执行链路中做进程内缓解
 - `repair`
   以显式命令执行本地修复动作
@@ -83,11 +83,11 @@ openclaw-guardian/
     logger.mjs
     preflight-runner.mjs
     repair-runner.mjs
-    runtime-runner.mjs
+    mitigation-runner.mjs
   issues/
     openai-codex-oauth-proxy-failure/
       issue.json
-      runtime.mjs
+      mitigation.mjs
       README.md
       i18n/
         en.json
@@ -100,7 +100,7 @@ openclaw-guardian/
       i18n/
         en.json
         zh-CN.json
-  runtime/
+  bridge/
     bootstrap/
       bash-init.bash
       logger.mjs
@@ -122,7 +122,7 @@ openclaw-guardian/
   issue 元数据
 - `README.md`
   issue 文档
-- `preflight.mjs` / `runtime.mjs` / `repair.mjs`
+- `preflight.mjs` / `mitigation.mjs` / `repair.mjs`
   对应能力面的实现
 - `i18n/*.json`
   该 issue 的本地化文案
@@ -136,23 +136,23 @@ openclaw-guardian/
 - issue 发现与校验
 - 运行时路径求值
 - 语言解析与文案渲染
-- `preflight` / `runtime` / `repair` runner
+- `preflight` / `mitigation` / `repair` runner
 - 结构化日志输出
 
 `core/` 不应承载任何 issue 特定业务逻辑。
 
-### 5.3 `runtime/`
+### 5.3 `bridge/`
 
-`runtime/` 是部署层。
+`bridge/` 是部署层。
 
 它存在的原因是：
 
-- 当前 `~/.openclaw/local-overrides` 的运行时挂载方式已经验证可行
+- 当前 `~/.openclaw/guardian` 的接入挂载方式已经验证可行
 - shell 与 Node 的统一接入入口需要一个稳定的导出目录
 
 因此：
 
-- `runtime/` 只负责接入与分发
+- `bridge/` 只负责接入与分发
 - 具体 issue 逻辑应落在 `issues/`
 - 共享机制应落在 `core/`
 
@@ -162,7 +162,7 @@ openclaw-guardian/
 
 当前 shell 统一入口是：
 
-- `runtime/bootstrap/bash-init.bash`
+- `bridge/bootstrap/bash-init.bash`
 
 它负责：
 
@@ -179,18 +179,18 @@ openclaw-guardian/
 
 当前 Node 统一入口是：
 
-- `runtime/bootstrap/node-entry.mjs`
+- `bridge/bootstrap/node-entry.mjs`
 
 它负责把控制权交给：
 
-- `core/runtime-runner.mjs`
+- `core/mitigation-runner.mjs`
 
 ### 6.3 运行时挂载路径
 
 当前约定仍保留：
 
 ```text
-$HOME/.openclaw/local-overrides
+$HOME/.openclaw/guardian
 ```
 
 但这个目录只是运行时软链接入口，不要求 Git 仓库本身必须位于 `~/.openclaw/` 下。
@@ -199,7 +199,7 @@ $HOME/.openclaw/local-overrides
 
 当前运行时启停覆盖文件是：
 
-- `runtime/config/enabled-issues.json`
+- `bridge/config/enabled-issues.json`
 
 格式为：
 
@@ -231,6 +231,7 @@ $HOME/.openclaw/local-overrides
 - `enabledByDefault`
 - `capabilities`
 - `triggers`
+- `appliesTo`
 - `entry`
 - `env.variables`
 - `logging.file`
@@ -242,6 +243,8 @@ $HOME/.openclaw/local-overrides
   描述 issue 当前启用哪些能力面
 - `triggers`
   描述 issue 命中的基本条件
+- `appliesTo`
+  描述 issue 适用的 `OpenClaw` 版本范围与未知版本时的策略
 - `entry`
   描述对应能力面的实现文件
 
@@ -304,7 +307,7 @@ $HOME/.openclaw/local-overrides
 
 当前能力面：
 
-- `runtime`
+- `mitigation`
 
 目标问题：
 
@@ -367,7 +370,7 @@ $HOME/.openclaw/local-overrides
 
 `openclaw-guardian` 当前已经从“本地覆盖脚本集合”转为：
 
-> 以 issue 为中心、以 `preflight` / `runtime` / `repair` 为能力面的 `OpenClaw` 本地问题治理框架。
+> 以 issue 为中心、以 `preflight` / `mitigation` / `repair` 为能力面的 `OpenClaw` 本地问题治理框架。
 
 后续新增问题时，应优先思考：
 

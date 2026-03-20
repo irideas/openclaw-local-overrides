@@ -3,7 +3,12 @@ import { pathToFileURL } from "node:url";
 import { createJsonlLogger } from "./logger.mjs";
 import { resolveLocale } from "./locale.mjs";
 import { loadIssueMessages, renderMessage } from "./i18n-renderer.mjs";
-import { resolveIssueContext, resolveIssueLogPath, validateIssue } from "./issue-loader.mjs";
+import {
+  evaluateIssueApplicability,
+  resolveIssueContext,
+  resolveIssueLogPath,
+  validateIssue,
+} from "./issue-loader.mjs";
 
 function writeLine(writer, text = "") {
   writer(`${text}\n`);
@@ -43,6 +48,13 @@ export async function runRepair(options = {}) {
 
   if (context.issue.capabilities.repair !== true || !context.issue.entry?.repair) {
     throw new Error(`issue does not expose repair capability: ${issueId}`);
+  }
+
+  const applicability = evaluateIssueApplicability(context.issue, context.openclawVersion);
+  if (!applicability.active) {
+    throw new Error(
+      `issue is not applicable for current OpenClaw version: ${applicability.openclawVersion || "unknown"}`,
+    );
   }
 
   const issueLog = createJsonlLogger(resolveIssueLogPath(context.logDir, context.issue, issueId), issueId, {

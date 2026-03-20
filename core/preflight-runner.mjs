@@ -5,11 +5,13 @@ import { resolveLocale } from "./locale.mjs";
 import { loadIssueMessages, renderMessage } from "./i18n-renderer.mjs";
 import {
   discoverIssues,
+  evaluateIssueApplicability,
   matchesIssue,
+  matchesIssueSelector,
   parseForcedIssues,
   resolveActiveIssueIds,
+  resolveGuardianPaths,
   resolveIssueLogPath,
-  resolveRuntimePaths,
   validateIssue,
 } from "./issue-loader.mjs";
 
@@ -17,8 +19,21 @@ function writeLine(writer, text = "") {
   writer(`${text}\n`);
 }
 
-function printFinding(writer, issueId, finding) {
-  writeLine(writer, `[${finding.severity || "warning"}] ${issueId}${finding.code ? ` / ${finding.code}` : ""}`);
+function localizeSeverity(locale, severity) {
+  if (locale === "zh-CN") {
+    if (severity === "error") return "错误";
+    if (severity === "warning") return "警告";
+    return severity || "警告";
+  }
+
+  return severity || "warning";
+}
+
+function printFinding(writer, locale, issueId, finding) {
+  writeLine(
+    writer,
+    `[${localizeSeverity(locale, finding.severity)}] ${issueId}${finding.code ? ` / ${finding.code}` : ""}`,
+  );
   writeLine(writer, finding.summary || issueId);
 
   if (finding.detail) {
@@ -36,7 +51,7 @@ export async function runPreflights(options = {}) {
   const env = options.env || process.env;
   const argv = options.argv || process.argv.slice(2);
   const writer = options.write || ((text) => process.stderr.write(text));
-  const paths = resolveRuntimePaths(env);
+  const paths = resolveGuardianPaths(env);
   const locale = resolveLocale(env, options.locale || null);
   const preflightLog = createJsonlLogger(path.join(paths.logDir, "preflight.log"), "guardian.preflight", {
     locale,
@@ -55,6 +70,7 @@ export async function runPreflights(options = {}) {
 
   preflightLog("preflight_loaded", {
     argv,
+    openclawVersion: paths.openclawVersion,
     issueConfigPath: paths.issueConfigPath,
     discoveredIssues: discoveredIssues.map(({ issueId }) => issueId),
     activeIssueIds,
@@ -62,20 +78,26 @@ export async function runPreflights(options = {}) {
   });
 
   for (const { issueId, issuePath, issue } of discoveredIssues) {
-    const forceMatch = forcedIssues.has(issueId);
+    const forceMatch = issue ? Array.from(forcedIssues).some((selector) => matchesIssueSelector(selector, issueId, issue)) : forcedIssues.has(issueId);
     const activeByConfig = activeSet.has(issueId);
+    const applicability = issue ? evaluateIssueApplicability(issue, paths.openclawVersion) : null;
+    const applicableByVersion = applicability ? applicability.active : false;
     const normalMatch = activeByConfig && issue ? matchesIssue(issue, argv) : false;
 
     preflightLog("issue_evaluated", {
       issueId,
       issuePath,
       activeByConfig,
+      applicableByVersion,
+      applicabilityReason: applicability?.reason || null,
+      openclawVersion: applicability?.openclawVersion || paths.openclawVersion || null,
+      versionRange: applicability?.versionRange || null,
       forceMatch,
       normalMatch,
       phase: "preflight",
     });
 
-    if (!forceMatch && !normalMatch) {
+    if (!forceMatch && (!normalMatch || !applicableByVersion)) {
       continue;
     }
 
@@ -137,7 +159,7 @@ export async function runPreflights(options = {}) {
 
       for (const finding of Array.isArray(issueFindings) ? issueFindings : []) {
         findings.push({ issueId, ...finding });
-        printFinding(writer, issueId, finding);
+        printFinding(writer, locale, issueId, finding);
       }
 
       issueLog("preflight_done", {

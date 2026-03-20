@@ -10,11 +10,11 @@
 
 当你修改了以下任一内容时，建议执行一次人工 E2E：
 
-- `runtime/bootstrap/bash-init.bash`
-- `runtime/bootstrap/node-entry.mjs`
-- `core/runtime-runner.mjs`
+- `bridge/bootstrap/bash-init.bash`
+- `bridge/bootstrap/node-entry.mjs`
+- `core/mitigation-runner.mjs`
 - `issues/openai-codex-oauth-proxy-failure/issue.json`
-- `issues/openai-codex-oauth-proxy-failure/runtime.mjs`
+- `issues/openai-codex-oauth-proxy-failure/mitigation.mjs`
 - 与代理接管、`curl fallback`、日志路径、运行时路由相关的核心逻辑
 
 ## 前置条件
@@ -26,7 +26,7 @@
 并建立了：
 
 ```text
-$HOME/.openclaw/local-overrides -> <repo-dir>/runtime
+$HOME/.openclaw/guardian -> <repo-dir>/bridge
 ```
 
 即可继续下面步骤。
@@ -76,13 +76,13 @@ OpenAI OAuth complete
 检查统一运行日志：
 
 ```bash
-tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
+tail -n 20 "$HOME/.openclaw/logs/guardian/guardian.log"
 ```
 
 检查 issue 日志：
 
 ```bash
-tail -n 40 "$HOME/.openclaw/logs/local-overrides/openai-codex-oauth-proxy-failure.log"
+tail -n 40 "$HOME/.openclaw/logs/guardian/openai-codex-oauth-proxy-failure.log"
 ```
 
 重点确认存在：
@@ -114,7 +114,7 @@ $HOME/.openclaw/agents/main/agent/auth-profiles.json
 如果人工 E2E 失败，至少保留：
 
 - 执行命令的完整终端输出
-- `runtime.log`
+- `guardian.log`
 - `openai-codex-oauth-proxy-failure.log`
 - 当前代理环境变量
 - 浏览器是否完成授权

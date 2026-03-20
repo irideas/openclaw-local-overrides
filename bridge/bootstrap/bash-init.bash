@@ -3,14 +3,14 @@
 # 设计目标：
 # 1. `~/.bash_profile` 里永远只保留这一条 `source`
 # 2. 所有 issue 共用同一种接入方式
-# 3. 具体 issue 的匹配与执行留给统一的 Node runtime 路由层
+# 3. 具体 issue 的匹配与执行留给统一的 Node mitigation 路由层
 #
 # 当前实现中，这个入口会给所有 `openclaw` 命令统一注入：
-# `NODE_OPTIONS=--import=<runtime>/bootstrap/node-entry.mjs`
+# `NODE_OPTIONS=--import=<bridge>/bootstrap/node-entry.mjs`
 #
 # 然后由 `node-entry.mjs` 自己判断：
 # - 当前命令是否命中某个 issue
-# - 哪些 issue 的 runtime 能力需要真正激活
+# - 哪些 issue 的 mitigation 能力需要真正激活
 
 if [[ -n "${__OPENCLAW_GUARDIAN_BOOTSTRAP_LOADED:-}" ]]; then
   return 0
@@ -19,38 +19,38 @@ __OPENCLAW_GUARDIAN_BOOTSTRAP_LOADED=1
 
 # 这里要区分“物理路径”和“运行时挂载路径”：
 # 1. 物理路径
-#    用来定位真实仓库目录，例如 `<repo-dir>/runtime/bootstrap`
+#    用来定位真实仓库目录，例如 `<repo-dir>/bridge/bootstrap`
 # 2. 挂载路径
-#    用来定位 `~/.openclaw/local-overrides` 以及它所在的 `~/.openclaw`
+#    用来定位 `~/.openclaw/guardian` 以及它所在的 `~/.openclaw`
 #
 # 这样做的原因是：
 # - Git 仓库可以 clone 到任意 `<repo-dir>`
-# - 但运行时约定仍固定挂载到 `~/.openclaw/local-overrides`
-# - 日志默认路径应该落到 `~/.openclaw/logs/local-overrides`
+# - 但接入目录约定仍固定挂载到 `~/.openclaw/guardian`
+# - 日志默认路径应该落到 `~/.openclaw/logs/guardian`
 #   而不是误落到仓库父目录下
 __openclaw_guardian_source_path="${BASH_SOURCE[0]}"
 __openclaw_guardian_bootstrap_dir="$(cd -P "$(dirname "${__openclaw_guardian_source_path}")" && pwd)"
-__openclaw_guardian_runtime_root="$(cd -P "${__openclaw_guardian_bootstrap_dir}/.." && pwd)"
-__openclaw_guardian_repo_root="$(cd -P "${__openclaw_guardian_runtime_root}/.." && pwd)"
-__openclaw_guardian_runtime_mount_root="$(cd "$(dirname "${__openclaw_guardian_source_path}")/.." && pwd -L)"
-__openclaw_guardian_home="${OPENCLAW_GUARDIAN_HOME:-$(cd "${__openclaw_guardian_runtime_mount_root}/.." && pwd -L)}"
+__openclaw_guardian_bridge_root="$(cd -P "${__openclaw_guardian_bootstrap_dir}/.." && pwd)"
+__openclaw_guardian_repo_root="$(cd -P "${__openclaw_guardian_bridge_root}/.." && pwd)"
+__openclaw_guardian_bridge_mount_root="$(cd "$(dirname "${__openclaw_guardian_source_path}")/.." && pwd -L)"
+__openclaw_guardian_home="${OPENCLAW_GUARDIAN_HOME:-$(cd "${__openclaw_guardian_bridge_mount_root}/.." && pwd -L)}"
 __openclaw_guardian_preload_path="${__openclaw_guardian_bootstrap_dir}/node-entry.mjs"
-__openclaw_guardian_log_dir="${OPENCLAW_GUARDIAN_LOG_DIR:-${__openclaw_guardian_home}/logs/local-overrides}"
-__openclaw_guardian_runtime_log_path="${__openclaw_guardian_log_dir}/runtime.log"
+__openclaw_guardian_log_dir="${OPENCLAW_GUARDIAN_LOG_DIR:-${__openclaw_guardian_home}/logs/guardian}"
+__openclaw_guardian_guardian_log_path="${__openclaw_guardian_log_dir}/guardian.log"
 
 _openclaw_guardian_log() {
   local event="$1"
   shift || true
 
-  # 统一入口自己的日志只写到 `runtime.log`。
-  # issue 级日志由 Node runtime 层再分发到各自文件。
-  mkdir -p "$(dirname "${__openclaw_guardian_runtime_log_path}")" 2>/dev/null || true
+  # 统一入口自己的日志只写到 `guardian.log`。
+  # issue 级日志由 Node mitigation 层再分发到各自文件。
+  mkdir -p "$(dirname "${__openclaw_guardian_guardian_log_path}")" 2>/dev/null || true
 
   printf '{"time":"%s","source":"bootstrap.bash-init","event":"%s","pid":%s,"args":"%s"}\n' \
     "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
     "${event}" \
     "$$" \
-    "$*" >> "${__openclaw_guardian_runtime_log_path}" 2>/dev/null || true
+    "$*" >> "${__openclaw_guardian_guardian_log_path}" 2>/dev/null || true
 }
 
 _openclaw_guardian_resolve_real_bin() {
@@ -109,12 +109,12 @@ openclaw() {
 
   # 注意这里不做 issue 匹配。
   # 无论 `openclaw` 执行什么子命令，统一入口都注入同一个 preload。
-  # 真正的 issue 匹配和 runtime 激活逻辑放在 `bootstrap/node-entry.mjs`，
+  # 真正的 issue 匹配和 mitigation 激活逻辑放在 `bootstrap/node-entry.mjs`，
   # 这样 shell 侧就始终保持最薄的一层。
   NODE_OPTIONS="${node_options}" \
   OPENCLAW_GUARDIAN_HOME="${__openclaw_guardian_home}" \
   OPENCLAW_GUARDIAN_REPO_ROOT="${__openclaw_guardian_repo_root}" \
-  OPENCLAW_GUARDIAN_RUNTIME_ROOT="${__openclaw_guardian_runtime_root}" \
+  OPENCLAW_GUARDIAN_BRIDGE_ROOT="${__openclaw_guardian_bridge_root}" \
   OPENCLAW_GUARDIAN_LOG_DIR="${__openclaw_guardian_log_dir}" \
   command "${real_bin}" "$@"
 }
@@ -129,7 +129,7 @@ guardian() {
 
   OPENCLAW_GUARDIAN_HOME="${__openclaw_guardian_home}" \
   OPENCLAW_GUARDIAN_REPO_ROOT="${__openclaw_guardian_repo_root}" \
-  OPENCLAW_GUARDIAN_RUNTIME_ROOT="${__openclaw_guardian_runtime_root}" \
+  OPENCLAW_GUARDIAN_BRIDGE_ROOT="${__openclaw_guardian_bridge_root}" \
   OPENCLAW_GUARDIAN_LOG_DIR="${__openclaw_guardian_log_dir}" \
   command node "${cli_path}" "$@"
 }

@@ -4,6 +4,10 @@
 
 这是 `openclaw-guardian` 当前内置的一个 `auth` 类 issue。
 
+当前 alias：
+
+- `codex-auth`
+
 它描述的问题现象是：
 
 ```bash
@@ -26,15 +30,15 @@ openclaw models auth login --provider openai-codex
 
 本 issue 当前启用的能力面是：
 
-- `runtime`
+- `mitigation`
 
 也就是说，它当前不是通过前置检查或显式修复命令解决，
 而是在命中的运行时链路里做非常窄的修复。
 
 在 [issue.json](./issue.json) 中，这一点体现在：
 
-- `capabilities.runtime = true`
-- `entry.runtime = "./runtime.mjs"`
+- `capabilities.mitigation = true`
+- `entry.mitigation = "./mitigation.mjs"`
 
 ## 触发条件
 
@@ -50,9 +54,17 @@ openclaw models auth login --provider openai-codex
 - `triggers.argvAll`
 - `triggers.provider`
 
+## 适用版本
+
+当前 `issue.json` 约定的 `OpenClaw` 版本范围是：
+
+- `>=2026.3.13 <2026.4.0`
+
+如果当前 `OpenClaw` 版本不在这个范围内，guardian 不会激活本 issue 的 `mitigation`。
+
 ## 当前修复思路
 
-这个 issue 的 `runtime` 实现位于 [runtime.mjs](./runtime.mjs)。
+这个 issue 的 `mitigation` 实现位于 [mitigation.mjs](./mitigation.mjs)。
 
 当前修复分两层：
 
@@ -70,26 +82,26 @@ openclaw models auth login --provider openai-codex
 
 统一接入入口是：
 
-- `runtime/bootstrap/bash-init.bash`
-- `runtime/bootstrap/node-entry.mjs`
+- `bridge/bootstrap/bash-init.bash`
+- `bridge/bootstrap/node-entry.mjs`
 
 它们负责：
 
 1. 接管 `openclaw` 命令
 2. 发现可用 issue
 3. 读取 `enabled-issues.json`
-4. 在命中时加载本 issue 的 [runtime.mjs](./runtime.mjs)
+4. 在命中时加载本 issue 的 [mitigation.mjs](./mitigation.mjs)
 
 运行时启停覆盖文件是：
 
-- `runtime/config/enabled-issues.json`
+- `bridge/config/enabled-issues.json`
 
 ## 日志
 
 这个 issue 的日志默认写入：
 
 ```text
-$HOME/.openclaw/logs/local-overrides/openai-codex-oauth-proxy-failure.log
+$HOME/.openclaw/logs/guardian/openai-codex-oauth-proxy-failure.log
 ```
 
 常见事件包括：
@@ -105,7 +117,7 @@ $HOME/.openclaw/logs/local-overrides/openai-codex-oauth-proxy-failure.log
 统一运行时日志仍写入：
 
 ```text
-$HOME/.openclaw/logs/local-overrides/runtime.log
+$HOME/.openclaw/logs/guardian/guardian.log
 ```
 
 ## 开关与调试
@@ -116,16 +128,16 @@ $HOME/.openclaw/logs/local-overrides/runtime.log
 OPENCLAW_GUARDIAN_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
-关闭本 issue 的 runtime 修复：
+关闭本 issue 的 mitigation 修复：
 
 ```bash
-OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_DISABLE=1 openclaw models auth login --provider openai-codex
+OPENCLAW_GUARDIAN_CODEX_AUTH_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
 仅关闭 `curl fallback`：
 
 ```bash
-OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_CURL_FALLBACK_DISABLE=1 openclaw models auth login --provider openai-codex
+OPENCLAW_GUARDIAN_CODEX_AUTH_CURL_FALLBACK_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
 强制在非匹配命令上激活本 issue，便于调试：
@@ -157,7 +169,7 @@ OPENCLAW_GUARDIAN_FORCE_ISSUES=openai-codex-oauth-proxy-failure node ...
 1. 单测
    覆盖公共 issue 发现、匹配、启停与路径求值逻辑
 2. 集成测试
-   验证统一 runtime 路由与本 issue 的假 `oauth/token` 交换
+   验证统一 mitigation 路由与本 issue 的假 `oauth/token` 交换
 3. 人工 E2E
    验证真实浏览器授权、真实 token 交换与真实落盘
 

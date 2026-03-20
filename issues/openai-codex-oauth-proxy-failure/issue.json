@@ -1,13 +1,20 @@
 {
   "id": "openai-codex-oauth-proxy-failure",
+  "alias": "codex-auth",
   "title": "OpenAI Codex OAuth token exchange fails behind HTTP proxy",
   "category": "auth",
   "severity": "error",
   "summary": "Fix OpenAI Codex OAuth token exchange behind HTTP proxy environments.",
   "enabledByDefault": true,
+  "appliesTo": {
+    "openclaw": {
+      "versionRange": ">=2026.3.13 <2026.4.0",
+      "whenUnknown": "inactive"
+    }
+  },
   "capabilities": {
     "preflight": false,
-    "runtime": true,
+    "mitigation": true,
     "repair": false
   },
   "triggers": {
@@ -15,14 +22,15 @@
     "provider": "openai-codex"
   },
   "entry": {
-    "runtime": "./runtime.mjs"
+    "mitigation": "./mitigation.mjs"
   },
   "env": {
+    "prefix": "OPENCLAW_GUARDIAN_CODEX_AUTH_",
     "variables": [
-      "OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_DISABLE",
-      "OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_CURL_FALLBACK_DISABLE",
-      "OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_STDERR",
-      "OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_OPENCLAW_ROOT"
+      "OPENCLAW_GUARDIAN_CODEX_AUTH_DISABLE",
+      "OPENCLAW_GUARDIAN_CODEX_AUTH_CURL_FALLBACK_DISABLE",
+      "OPENCLAW_GUARDIAN_CODEX_AUTH_STDERR",
+      "OPENCLAW_GUARDIAN_CODEX_AUTH_OPENCLAW_ROOT"
     ]
   },
   "logging": {

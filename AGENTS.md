@@ -5,7 +5,7 @@
 
 ## 维护原则
 
-- 优先保持 `core/` 与 `runtime/bootstrap/` 稳定，避免把 issue 特定逻辑回灌到公共层
+- 优先保持 `core/` 与 `bridge/bootstrap/` 稳定，避免把 issue 特定逻辑回灌到公共层
 - 新增或修改 issue 时，应同时补齐对应文档与测试
 - 不直接修改全局安装的 `openclaw`，本仓库只维护本地覆盖层
 

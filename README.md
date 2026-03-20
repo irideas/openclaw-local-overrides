@@ -25,8 +25,8 @@
 
 - `preflight`
   在命令真正执行前检查风险，并输出提示
-- `runtime`
-  在命中场景下做进程内窄修复
+- `mitigation`
+  在命中场景下做进程内窄缓解
 - `repair`
   以显式、可审计的方式执行本地修复动作
 
@@ -55,7 +55,7 @@ openclaw models auth login --provider openai-codex
 - `fetch failed`
 - 明明代理可用，但 `OpenClaw` 的 `openai-codex` OAuth 流程仍无法完成
 
-这个 issue 当前主要通过 `runtime` 能力面落地，
+这个 issue 当前主要通过 `mitigation` 能力面落地，
 即在命中的运行时链路上做非常窄的代理接管与 `curl fallback`。
 
 以及：
@@ -100,8 +100,9 @@ openclaw plugins list
 3. 为这个 issue 补充：
    - 现象描述
    - 触发条件
+   - 适用的 `OpenClaw` 版本范围
    - 用户可见提示
-   - `preflight` / `runtime` / `repair` 中合适的能力
+   - `preflight` / `mitigation` / `repair` 中合适的能力
 4. 再把可重复的执行套路沉淀到公共 `core/`
 
 这让项目可以同时承载：
@@ -135,11 +136,11 @@ openclaw-guardian/
     logger.mjs
     preflight-runner.mjs
     repair-runner.mjs
-    runtime-runner.mjs
+    mitigation-runner.mjs
   issues/
     openai-codex-oauth-proxy-failure/
       issue.json
-      runtime.mjs
+      mitigation.mjs
       README.md
       i18n/
         en.json
@@ -152,7 +153,7 @@ openclaw-guardian/
       i18n/
         en.json
         zh-CN.json
-  runtime/
+  bridge/
     bootstrap/
       bash-init.bash
       logger.mjs
@@ -174,8 +175,8 @@ openclaw-guardian/
   负责承载具体问题现象
 - `core/`
   负责承载公共执行机制
-- `runtime/`
-  负责导出真正接入 `OpenClaw` 运行时的薄入口
+- `bridge/`
+  负责导出真正接入 `OpenClaw` 的薄入口
 
 ## 多语言输出
 
@@ -199,9 +200,9 @@ guardian
 它可用于：
 
 - `guardian issue list`
-- `guardian issue show <issue-id>`
-- `guardian repair <issue-id> --dry-run`
-- `guardian repair <issue-id> --apply`
+- `guardian issue show <issue-id-or-alias>`
+- `guardian repair <issue-id-or-alias> --dry-run`
+- `guardian repair <issue-id-or-alias> --apply`
 
 ## 安装
 
@@ -220,23 +221,23 @@ git clone "<repo-url>" "<repo-dir>"
 
 ### 2. 建立运行时软链接
 
-运行时固定使用：
+接入目录固定使用：
 
 ```text
-$HOME/.openclaw/local-overrides
+$HOME/.openclaw/guardian
 ```
 
-但这个目录不直接承载整个仓库，而是软链接到仓库内的 `runtime/`：
+但这个目录不直接承载整个仓库，而是软链接到仓库内的 `bridge/`：
 
 ```bash
-ln -sfn "<repo-dir>/runtime" "$HOME/.openclaw/local-overrides"
+ln -sfn "<repo-dir>/bridge" "$HOME/.openclaw/guardian"
 ```
 
 ### 3. 在 `~/.bash_profile` 中接入统一入口
 
 ```bash
-[ -f "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash" ] && \
-  source "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash"
+[ -f "$HOME/.openclaw/guardian/bootstrap/bash-init.bash" ] && \
+  source "$HOME/.openclaw/guardian/bootstrap/bash-init.bash"
 ```
 
 ### 4. 重新加载 shell
@@ -250,7 +251,7 @@ source ~/.bash_profile
 编辑：
 
 ```text
-$HOME/.openclaw/local-overrides/config/enabled-issues.json
+$HOME/.openclaw/guardian/config/enabled-issues.json
 ```
 
 示例：
@@ -284,7 +285,7 @@ openclaw is a function
 然后可继续查看日志：
 
 ```bash
-tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
+tail -n 20 "$HOME/.openclaw/logs/guardian/guardian.log"
 ```
 
 也可以验证 `guardian` 是否已接入：
