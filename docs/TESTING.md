@@ -54,6 +54,48 @@
 - 必须可离线运行
 - 必须在 CI 中自动执行
 - 必须不要求任何 secret 或代理地址
+- 必须不依赖开发者本机是否安装了 `openclaw`
+- 必须不依赖 `PATH`、`HOME`、用户目录状态或 `process.env` 中的偶然值
+- 如果公共 runner 已经把路径、版本或环境解析后注入 `context`，issue 测试必须优先使用这些注入值，而不是自行回退到本机探测逻辑
+
+### 环境独立性要求
+
+`unit` 最容易出现一种伪通过：
+
+- 本机因为已经安装了 `openclaw`
+- 或者本机 `PATH`、`HOME`、日志目录、用户配置刚好满足某些假设
+- 导致测试即使写错了依赖边界，也依然会在开发机上通过
+- 但到了 GitHub Actions 的干净环境里立即失败
+
+这类问题在 `openclaw-guardian` 里必须被视为测试设计缺陷，而不是“CI 偶发问题”。
+
+因此，`unit` 层必须遵守下面这些规则：
+
+- 需要 `OpenClaw` 安装目录时，优先使用 runner 注入的 `context.openclawRoot`
+- 需要 `OpenClaw` 版本时，优先使用 runner 注入的 `context.openclawVersion`
+- 需要 `OpenClaw` home 或日志目录时，优先使用测试显式传入的临时目录
+- 不在 `unit` 里把 `process.env` 当成唯一事实来源
+- 不在 `unit` 里依赖 `type -P openclaw`、用户真实 `~/.openclaw` 或全局安装状态
+
+如果某段逻辑必须保留自动探测分支：
+
+- 那么该分支应被视为运行时兜底逻辑
+- 单测仍应优先验证“显式注入值优先生效”
+
+### 近期案例
+
+`plugins-feishu-duplicate-id` 的 `preflight` 曾经直接读取 `process.env` 并回退到本机 `openclaw` 安装路径。
+这导致：
+
+- 开发机因为装了全局 `openclaw`，测试通过
+- GitHub `ubuntu-latest` runner 没有同样的本机状态，测试失败
+
+后续修复方式是：
+
+- 让检测逻辑优先使用 runner 传入的 `context.openclawRoot`
+- 再补一条定向单测，明确要求优先级不能回退
+
+这类案例后续不应再次出现。
 
 ### 当前对应
 

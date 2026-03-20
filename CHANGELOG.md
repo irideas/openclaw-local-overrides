@@ -2,6 +2,13 @@
 
 本文档记录 `openclaw-guardian` 从 `1.0.0` 开始的正式版本演进。
 
+## 1.2.0 - 2026-03-20
+
+### Changed
+
+- 在 `docs/TESTING.md` 中补充单测环境独立性约束，明确禁止依赖开发机本地 `openclaw`、`PATH`、`HOME` 或用户目录状态
+- 在 `AGENTS.md` 中补充同类维护规则，要求 issue 与测试优先使用 runner 注入的 `context` 值
+
 ## 1.1.0 - 2026-03-20
 
 ### Changed
