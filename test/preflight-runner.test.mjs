@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { runPreflights } from "../core/preflight-runner.mjs";
+import { inspectState } from "../issues/plugins-feishu-duplicate-id/preflight.mjs";
 import {
   cleanupDir,
   createTempBundledOpenClawRoot,
@@ -47,6 +48,25 @@ test("runPreflights 应当输出匹配 issue 的中文提示", async () => {
     cleanupDir(openclawHome);
     cleanupDir(bundledRoot);
     cleanupDir(logDir);
+  }
+});
+
+test("plugins-feishu-duplicate-id 的状态检测应优先使用 context.openclawRoot", () => {
+  const openclawHome = createTempOpenClawHome();
+  const bundledRoot = createTempBundledOpenClawRoot();
+
+  try {
+    const state = inspectState({
+      openclawHome,
+      openclawRoot: bundledRoot,
+    });
+
+    assert.equal(state.bundledOpenClawRoot, bundledRoot);
+    assert.equal(state.bundledFeishuExists, true);
+    assert.equal(state.bundledFeishuIndex, path.join(bundledRoot, "extensions", "feishu", "index.ts"));
+  } finally {
+    cleanupDir(openclawHome);
+    cleanupDir(bundledRoot);
   }
 });
 

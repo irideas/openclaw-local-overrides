@@ -41,8 +41,23 @@ function resolveOpenClawRootFromPath(filePath) {
   return null;
 }
 
-function resolveBundledOpenClawRoot() {
-  const override = process.env.OPENCLAW_GUARDIAN_OPENCLAW_ROOT;
+function resolveBundledOpenClawRoot(context = {}) {
+  // 这里必须优先相信 runner 已经解析好的 `context.openclawRoot`。
+  //
+  // 原来的实现直接读 `process.env` 并回退到本机 PATH / Node 安装目录。
+  // 这会导致测试在“本机装了 openclaw”时被偶然救活，但在 GitHub runner
+  // 这种干净环境里却找不到 bundled `feishu`，从而出现本地通过、CI 失败。
+  //
+  // 因此，这里把优先级明确为：
+  // 1. 调用方传入的 `context.openclawRoot`
+  // 2. 当前进程环境中的显式覆盖
+  // 3. 仅作为最后兜底的自动探测
+  const contextRoot = context.openclawRoot;
+  if (contextRoot && pathExists(path.join(contextRoot, "extensions", "feishu", "index.ts"))) {
+    return contextRoot;
+  }
+
+  const override = context.env?.OPENCLAW_GUARDIAN_OPENCLAW_ROOT || process.env.OPENCLAW_GUARDIAN_OPENCLAW_ROOT;
   if (override && pathExists(path.join(override, "extensions", "feishu", "index.ts"))) {
     return override;
   }
@@ -78,7 +93,7 @@ export function inspectState(context) {
   const backupRoot = path.join(openclawHome, ".extensions-backup");
   const config = readOpenClawConfig(configPath);
   const plugins = config.plugins && typeof config.plugins === "object" ? config.plugins : {};
-  const bundledOpenClawRoot = resolveBundledOpenClawRoot();
+  const bundledOpenClawRoot = resolveBundledOpenClawRoot(context);
   const bundledFeishuIndex = bundledOpenClawRoot
     ? path.join(bundledOpenClawRoot, "extensions", "feishu", "index.ts")
     : null;
