@@ -8,7 +8,7 @@
 - 一组可启停的 `modules`
 - 一份集中配置 `config/enabled-modules.json`
 
-当前仓库版本：`0.4.0`
+当前仓库版本：`0.5.0`
 
 版本演进请参考：
 
@@ -237,3 +237,40 @@ export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 - 模块发现与默认启用策略
 - 统一 preload 路由
 - 统一 bash 入口到 `openai-codex-auth-proxy` 的集成路径
+
+## GitHub Actions
+
+仓库当前提供：
+
+- `push` 到 `main` 时自动执行 `unit`
+- `pull_request` 时自动执行 `unit`
+- `workflow_dispatch` 时可选执行 `integration`
+
+工作流文件：
+
+```text
+.github/workflows/test.yml
+```
+
+如果你希望在 GitHub 上运行集成测试，需要在仓库里配置 secret：
+
+```text
+OPENCLAW_PROXY_TEST_PROXY_URL
+```
+
+GitHub 路径：
+
+```text
+Repo Settings -> Secrets and variables -> Actions
+```
+
+配置完后，可以在：
+
+```text
+Repo -> Actions -> ci -> Run workflow
+```
+
+手动勾选 `run_integration` 来执行集成测试。
+
+如果你只需要“提交代码后自动跑测试”，当前默认已经满足，
+前提是仓库已启用 GitHub Actions。

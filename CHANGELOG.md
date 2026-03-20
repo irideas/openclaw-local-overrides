@@ -8,6 +8,21 @@
 - 次版本：增加新能力、扩展模块框架
 - 修订版本：修复问题、补充测试或文档
 
+## 0.5.0 - 2026-03-20
+
+### Added
+
+- 增加更完整的 GitHub Actions CI：
+  - `push` / `pull_request` 自动执行 `unit`
+  - `workflow_dispatch` 可手动执行 `integration`
+- 增加仓库侧代理 secret 约定：
+  `OPENCLAW_PROXY_TEST_PROXY_URL`
+
+### Changed
+
+- 仓库版本提升到 `0.5.0`
+- README 补充 GitHub 仓库 Actions 与 CI 配置说明
+
 ## 0.4.0 - 2026-03-20
 
 ### Added
@@ -61,4 +76,3 @@
 - `openai-codex-auth-proxy` 模块
 - 统一 Bash 入口与统一 Node preload 路由
 - `EnvHttpProxyAgent + curl fallback` 方案
-

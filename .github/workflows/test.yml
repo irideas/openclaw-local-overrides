@@ -1,12 +1,23 @@
-name: test
+name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_integration:
+        description: "Run integration tests that require an HTTP proxy"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  unit:
+    name: unit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,5 +28,43 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies
+        run: npm install
+
       - name: Run unit tests
         run: npm run test:unit
+
+  integration:
+    name: integration
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate proxy secret
+        env:
+          OPENCLAW_PROXY_TEST_PROXY_URL: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
+        run: |
+          if [ -z "$OPENCLAW_PROXY_TEST_PROXY_URL" ]; then
+            echo "Missing repository secret: OPENCLAW_PROXY_TEST_PROXY_URL" >&2
+            exit 1
+          fi
+
+      - name: Run integration tests
+        env:
+          HTTP_PROXY: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
+          HTTPS_PROXY: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
+          OPENCLAW_PROXY_TEST_PROXY_URL: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
+        run: |
+          unset ALL_PROXY
+          unset all_proxy
+          npm run test:integration
