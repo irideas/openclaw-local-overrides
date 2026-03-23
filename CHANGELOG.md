@@ -2,6 +2,32 @@
 
 本文档记录 `openclaw-guardian` 从 `1.0.0` 开始的正式版本演进。
 
+## 1.4.0 - 2026-03-23
+
+### Added
+
+- 新增 `templates/issue/` 最小模板集，覆盖 `issue.json`、`README.md`、`i18n` 与三种能力面文件
+- 新增 `scripts/new-issue.mjs`，用于快速生成最小合法 issue 骨架
+- 新增 `test/new-issue.test.mjs`，验证脚手架生成结果与参数校验
+
+### Changed
+
+- 在 `docs/ISSUE-AUTHORING.md` 中补充脚手架说明
+- 在根 `README.md` 中补充模板与脚手架入口
+
+## 1.3.0 - 2026-03-23
+
+### Added
+
+- 新增 `docs/ISSUE-AUTHORING.md`，沉淀新增 issue 的判断标准、能力面选择与最小交付要求
+- 新增 `docs/ISSUE-SCHEMA.md`，显式化 `issue.json` 的字段、约束、示例与常见错误
+- 新增 `docs/RUNTIME-CONTRACT.md`，说明 `bridge/bootstrap`、runner 与 issue context 的运行时契约
+- 新增 `docs/MAINTENANCE.md`，沉淀升级、回归、发布与 CI 排障 checklist
+
+### Changed
+
+- 在根 `README.md` 中补充“维护与扩展”入口，串起面向 AI Agent 和维护者的关键文档
+
 ## 1.2.0 - 2026-03-20
 
 ### Changed

@@ -4,7 +4,7 @@
 它不替代上游，不重打包 `OpenClaw`，而是围绕真实环境里的运行时异常、配置冲突与可复现故障，
 提供一套可本地接入、可逐步下线、可独立维护的问题发现与修复机制。
 
-当前版本：`1.2.0`
+当前版本：`1.4.0`
 
 ## 这是什么
 
@@ -128,8 +128,24 @@ openclaw-guardian/
   LICENSE
   docs/
     ARCHITECTURE.md
+    ISSUE-AUTHORING.md
+    ISSUE-SCHEMA.md
     MANUAL-E2E.md
+    MAINTENANCE.md
+    RUNTIME-CONTRACT.md
     TESTING.md
+  scripts/
+    new-issue.mjs
+  templates/
+    issue/
+      issue.json
+      README.md
+      i18n/
+        en.json
+        zh-CN.json
+      preflight.mjs
+      mitigation.mjs
+      repair.mjs
   core/
     i18n-renderer.mjs
     issue-loader.mjs
@@ -191,6 +207,31 @@ openclaw-guardian/
 - 公共层只负责语言解析与文案渲染
 
 这样后续新增 issue 时，就可以在不改公共框架的前提下补齐对应语言。
+
+## 维护与扩展
+
+如果你准备继续开发或维护这个仓库，建议按下面顺序阅读：
+
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+  先了解整体分层与 issue 中心模型
+- [ISSUE-AUTHORING.md](./docs/ISSUE-AUTHORING.md)
+  再看如何新增或修改一个 issue
+- [ISSUE-SCHEMA.md](./docs/ISSUE-SCHEMA.md)
+  再看 `issue.json` 的字段与约束
+- [RUNTIME-CONTRACT.md](./docs/RUNTIME-CONTRACT.md)
+  了解 `bridge`、runner 与 issue context 的契约
+- [MAINTENANCE.md](./docs/MAINTENANCE.md)
+  了解升级、回归、发布与 CI 排障 checklist
+- [TESTING.md](./docs/TESTING.md)
+  了解测试分层与环境独立性约束
+- [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
+  了解哪些变更必须补手工闭环验证
+
+如果你准备新增 issue，推荐直接使用：
+
+```bash
+node scripts/new-issue.mjs --id example-runtime-issue --capabilities preflight
+```
 
 接入 `bash-init.bash` 后，当前 shell 还会提供一个显式命令：
 

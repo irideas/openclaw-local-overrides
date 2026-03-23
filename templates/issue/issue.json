@@ -1,0 +1,13 @@
+{
+  "id": __ISSUE_ID_JSON__,
+  "alias": __ISSUE_ALIAS_JSON__,
+  "title": __ISSUE_TITLE_JSON__,
+  "category": __ISSUE_CATEGORY_JSON__,
+  "severity": __ISSUE_SEVERITY_JSON__,
+  "summary": __ISSUE_SUMMARY_JSON__,
+  "enabledByDefault": __ISSUE_ENABLED_BY_DEFAULT__,
+  "capabilities": __ISSUE_CAPABILITIES_JSON__,
+  "triggers": __ISSUE_TRIGGERS_JSON__,
+  "entry": __ISSUE_ENTRY_JSON__,
+  "upstream": __ISSUE_UPSTREAM_JSON____ISSUE_APPLIES_TO_SUFFIX__
+}
