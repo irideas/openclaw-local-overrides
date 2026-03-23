@@ -63,7 +63,13 @@
 - `internal/`：项目组内部治理、Agent 角色、工作台规则与内部流程
 - `issues`：候选问题、维护任务、上游跟踪与后续正式 issue 工作
 - `CHANGELOG.md`：正式演进记录
-- 后续可启用 `Discussions`：用于结构化讨论与长期协作话题
+- `Discussions`：用于结构化讨论、阶段性维护记录与长期协作话题
+
+当前约定：
+
+- 与项目维护节奏、阶段性进展、工作台同步有关的记录，优先放在 GitHub Discussions
+- Discussions 中的维护记录默认使用简体中文
+- 不把项目组内部工作材料直接塞进对外 `docs/`；应根据公开/内部边界分别放入 `docs/` 或 `internal/`
 
 前期不强制建立 labels/project；待工作流稳定后再逐步引入。
 

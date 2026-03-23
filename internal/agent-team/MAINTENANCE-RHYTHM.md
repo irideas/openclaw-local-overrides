@@ -39,9 +39,14 @@
 
 建议优先落在 GitHub repo 内，例如：
 
-- 一个 weekly review issue
+- 一个 GitHub Discussions 的 weekly review 帖子
 - 或一个 `internal/` 下的报告条目
-- 或后续 GitHub Discussions 帖子
+- 或其他明确可追踪的仓库内载体
+
+当前优先约定：
+
+- 阶段性维护记录优先放在 GitHub Discussions
+- 记录语言默认使用简体中文
 
 ## 3. Phase 3 — Cloud-hosted ongoing maintenance
 
