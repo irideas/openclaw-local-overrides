@@ -75,7 +75,7 @@
 - 需要 `OpenClaw` 版本时，优先使用 runner 注入的 `context.openclawVersion`
 - 需要 `OpenClaw` home 或日志目录时，优先使用测试显式传入的临时目录
 - 不在 `unit` 里把 `process.env` 当成唯一事实来源
-- 不在 `unit` 里依赖 `type -P openclaw`、用户真实 `~/.openclaw` 或全局安装状态
+- 不在 `unit` 里依赖 `type -P openclaw`、用户真实运行时目录或全局安装状态
 
 如果某段逻辑必须保留自动探测分支：
 
@@ -276,7 +276,7 @@ openclaw models auth login --provider openai-codex
 执行位置：
 
 - 在你自己的仓库根目录 `<repo-dir>` 下执行
-- 不要求仓库位于 `~/.openclaw/` 目录内
+- 不要求仓库位于任何固定目录
 
 ### 手工验证
 

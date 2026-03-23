@@ -141,5 +141,5 @@ openclaw gateway restart
 
 ## 相关文档
 
-- [README.md](/Users/irideas/.openclaw/openclaw-guardian/README.md)
+- [README.md](../../README.md)
 - [ARCHITECTURE.md](../../docs/ARCHITECTURE.md)

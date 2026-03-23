@@ -222,13 +222,13 @@ git clone "<repo-url>" "<repo-dir>"
 
 ### 2. 建立运行时软链接
 
-接入目录固定使用：
+默认运行时接入点为：
 
 ```text
 $HOME/.openclaw/guardian
 ```
 
-但这个目录不直接承载整个仓库，而是软链接到仓库内的 `bridge/`：
+这个目录不直接承载整个仓库，而是软链接到仓库内的 `bridge/`：
 
 ```bash
 ln -sfn "<repo-dir>/bridge" "$HOME/.openclaw/guardian"
@@ -249,7 +249,7 @@ source ~/.bash_profile
 
 ### 5. 配置 issue 启停覆盖
 
-编辑：
+默认配置文件：
 
 ```text
 $HOME/.openclaw/guardian/config/enabled-issues.json

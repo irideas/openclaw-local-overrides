@@ -181,6 +181,6 @@ OPENCLAW_GUARDIAN_FORCE_ISSUES=codex-auth node ...
 
 ## 相关文档
 
-- [README.md](/Users/irideas/.openclaw/openclaw-guardian/README.md)
+- [README.md](../../README.md)
 - [TESTING.md](../../docs/TESTING.md)
 - [MANUAL-E2E.md](../../docs/MANUAL-E2E.md)

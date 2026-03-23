@@ -17,16 +17,16 @@ if [[ -n "${__OPENCLAW_GUARDIAN_BOOTSTRAP_LOADED:-}" ]]; then
 fi
 __OPENCLAW_GUARDIAN_BOOTSTRAP_LOADED=1
 
-# 这里要区分“物理路径”和“运行时挂载路径”：
+# 这里要区分“物理路径”和“运行时接入路径”：
 # 1. 物理路径
 #    用来定位真实仓库目录，例如 `<repo-dir>/bridge/bootstrap`
-# 2. 挂载路径
-#    用来定位 `~/.openclaw/guardian` 以及它所在的 `~/.openclaw`
+# 2. 接入路径
+#    用来定位默认的 guardian 接入目录以及它所在的 `OpenClaw` home
 #
 # 这样做的原因是：
 # - Git 仓库可以 clone 到任意 `<repo-dir>`
-# - 但接入目录约定仍固定挂载到 `~/.openclaw/guardian`
-# - 日志默认路径应该落到 `~/.openclaw/logs/guardian`
+# - 但默认接入目录仍约定为 `~/.openclaw/guardian`
+# - 默认日志路径应该落到 `~/.openclaw/logs/guardian`
 #   而不是误落到仓库父目录下
 __openclaw_guardian_source_path="${BASH_SOURCE[0]}"
 __openclaw_guardian_bootstrap_dir="$(cd -P "$(dirname "${__openclaw_guardian_source_path}")" && pwd)"

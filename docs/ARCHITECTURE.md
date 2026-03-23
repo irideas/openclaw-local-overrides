@@ -147,7 +147,7 @@ openclaw-guardian/
 
 它存在的原因是：
 
-- 当前 `~/.openclaw/guardian` 的接入挂载方式已经验证可行
+- 当前默认的 guardian 接入挂载方式已经验证可行
 - shell 与 Node 的统一接入入口需要一个稳定的导出目录
 
 因此：
@@ -187,13 +187,13 @@ openclaw-guardian/
 
 ### 6.3 运行时挂载路径
 
-当前约定仍保留：
+当前默认运行时接入点是：
 
 ```text
 $HOME/.openclaw/guardian
 ```
 
-但这个目录只是运行时软链接入口，不要求 Git 仓库本身必须位于 `~/.openclaw/` 下。
+但这个目录只是运行时软链接入口，不要求 Git 仓库本身位于固定位置。
 
 ## 7. 配置模型
 

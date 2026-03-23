@@ -23,7 +23,7 @@
 
 这里不要求 Git 仓库位于固定目录。
 只要你已经把仓库 clone 到任意 `<repo-dir>`，
-并建立了：
+并建立了默认运行时软链接：
 
 ```text
 $HOME/.openclaw/guardian -> <repo-dir>/bridge
